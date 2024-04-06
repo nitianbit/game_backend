@@ -8,13 +8,18 @@ import cors from 'cors'
 import { CONFIG } from './src/config/config.js';
 import settings from './settings.js';
 import { connectDB } from './src/db/index.js';
+import { authRoutes } from './src/routes/index.js';
 
 dotenv.config({ path: path.resolve(settings.PROJECT_DIR, `.env`) });
 
 app.use(cors());
-app.use(express.json());
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.json({ limit: "10mb" }));
 
 connectDB()
+
+
+authRoutes(app)
 
 
 
