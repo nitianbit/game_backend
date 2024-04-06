@@ -15,10 +15,16 @@ export const routes = {
             router: authRouter
         }
     ],
-    protectedRoutes: [],
+    protectedRoutes: [
+        {
+            path: '/api/profile',
+            router: authRouter
+        }
+    ],
 
 }
 
 // export const openRoutes = (server) => routes.openRoutes.map((r) => server.use(r.path, r.router))
 export const authRoutes = (server) => routes.authRoutes.map((r) => server.use(r.path, r.router));
+export const protectedRoutes = (server) => routes.protectedRoutes.map((r) => server.use(r.path, r.router));
 

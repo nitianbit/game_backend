@@ -61,3 +61,14 @@ export const signup = async (req, res) => {
         return sendResponse(res, 500, "Internal Server Error", error);
     }
 }
+
+
+export const getProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id).select("-password -userType").lean();
+        return sendResponse(res, 200, "Success", user)
+    } catch (error) {
+        console.log(error);
+        return sendResponse(res, 500, "Internal Server Error", error);
+    }
+}
