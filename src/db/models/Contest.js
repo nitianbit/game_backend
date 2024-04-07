@@ -5,7 +5,7 @@ const schema = new mongoose.Schema({
     winner: { type: mongoose.Types.ObjectId, ref: 'User' },
     winningNumber: { type: Number },
     winningAmount: { type: Number },
-    adminModifiedWinner: {
+    modifiedByAdmin: {
         type: Boolean,
         default: false
     },
