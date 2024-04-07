@@ -1,15 +1,16 @@
 import authRouter from "../modules/auth/routes.js"
+import contestRouter from "../modules/contest/routes.js";
 import { isValidAdmin } from "../modules/middlewares/index.js";
 
 
 
 export const routes = {
-    // openRoutes: [
-    //     {
-    //         path: '/api/auth',
-    //         router: mxRouter
-    //     }
-    // ],
+    openRoutes: [
+        // {
+        //     path: '/api/contest',
+        //     router: contestRouter
+        // }
+    ],
     authRoutes: [
         {
             path: '/api/auth',
@@ -25,6 +26,10 @@ export const routes = {
             path: '/api/sample-test-admin',
             router: authRouter,
             middlewares: [isValidAdmin]
+        },
+        {
+            path: '/api/contest',
+            router: contestRouter
         }
     ],
 

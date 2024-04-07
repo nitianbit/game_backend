@@ -6,3 +6,6 @@ export const sendResponse = (res, statusCode, message, data = null) => {
         data: data
     });
 }
+
+
+export const now = () => Math.floor(Date.now() / 1000)

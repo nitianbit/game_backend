@@ -8,7 +8,8 @@ const schema = new mongoose.Schema({
     adminModifiedWinner: {
         type: Boolean,
         default: false
-    }
+    },
+    startTime: { type: Number }
 }, {
     collection: 'Contest',
 });
