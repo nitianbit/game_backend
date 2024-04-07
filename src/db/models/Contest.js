@@ -4,7 +4,11 @@ const schema = new mongoose.Schema({
     status: Number, //0- created, 1- running, 2-ended
     winner: { type: mongoose.Types.ObjectId, ref: 'User' },
     winningNumber: { type: Number },
-    winningAmount: { type: Number }
+    winningAmount: { type: Number },
+    adminModifiedWinner: {
+        type: Boolean,
+        default: false
+    }
 }, {
     collection: 'Contest',
 });
