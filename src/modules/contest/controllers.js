@@ -19,7 +19,7 @@ export const modifyContestWinningNumber = async (req, res) => {
         if (!contestId) {
             return sendResponse(res, 400, "Invalid request")
         }
-        const response = await contestManager.updateContestWinningWinner(contestId, winningNumber);
+        const response = await contestManager.updateContestWinningNumber(contestId, winningNumber);
         return sendResponse(res, 200, "Success", response)
     } catch (error) {
         console.log(error);

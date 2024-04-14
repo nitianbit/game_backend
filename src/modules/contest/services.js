@@ -70,13 +70,13 @@ class ContestManager {
         ]);
 
         const betSummaryMap = new Map();
-        for (let i = 0; i <= 9; i++) {
+        for (let i = 1; i <= 10; i++) {
             betSummaryMap.set(i, { totalCount: 0, totalAmount: 0 });
         }
 
-        betSummary.forEach(entry => {
+        betSummary.forEach((entry, number) => {
             const { _id, totalCount, totalAmount } = entry;
-            betSummaryMap.set(_id, { totalCount, totalAmount });
+            betSummaryMap.set(number, { totalCount, totalAmount });
         });
 
         return betSummaryMap;
