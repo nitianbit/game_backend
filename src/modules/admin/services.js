@@ -11,3 +11,6 @@ export const updateUser = async (userId, userData) => {
 export const deleteUser = async (userId) => {
     await User.findByIdAndDelete(userId).lean();
 }
+export const getUser = async (userId) => {
+    await User.findById(userId).select("-password").lean();
+}

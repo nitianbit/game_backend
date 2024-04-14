@@ -1,6 +1,6 @@
 import { User } from "../../db/models/User.js";
 import { sendResponse } from "../../utils/helper.js";
-import { getAllUsers, updateUser, deleteUser } from "./services.js";
+import { getAllUsers, updateUser, deleteUser, getUser } from "./services.js";
 
 
 export const getUsers = async (req, res) => {
@@ -13,7 +13,7 @@ export const getUsers = async (req, res) => {
     }
 }
 
-export const updateUser = async (req, res) => {
+export const updateSingleUser = async (req, res) => {
     try {
         const { userId } = req.params;
         const { username, balance } = req.body;
@@ -27,12 +27,23 @@ export const updateUser = async (req, res) => {
     }
 }
 
-export const deleteUser = async (req, res) => {
+export const deleteSingleUser = async (req, res) => {
     try {
         const { userId } = req.params;
 
         await deleteUser(userId);
         sendResponse(res, 200, "User deleted successfully",)
+    } catch (error) {
+        console.error(error);
+        sendResponse(res, 500, "Internal server error", error)
+    }
+}
+export const getSingleUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        const user = await getUser(userId);
+        sendResponse(res, 200, "User Fetched successfully", user)
     } catch (error) {
         console.error(error);
         sendResponse(res, 500, "Internal server error", error)
