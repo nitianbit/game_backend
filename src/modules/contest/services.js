@@ -133,4 +133,22 @@ const contestManager = new ContestManager();
 Object.freeze(contestManager);
 export {
     contestManager
-}; 
+};
+
+export const getAllContests = async (page, limit) => {
+    //populate winner name maybe?
+    let request = Contest.find();
+    if (page !== -1) {
+        const skip = (page - 1) * limit;
+        request = request.skip(skip);
+    }
+    let data = {
+        rows: await request.lean()
+    }
+
+    if (page == 1) {
+        const total = await Contest.countDocuments();
+        data = { ...data, total };
+    }
+    return data;
+}

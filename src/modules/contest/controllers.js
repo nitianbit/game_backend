@@ -1,5 +1,5 @@
 import { sendResponse } from "../../utils/helper.js";
-import { contestManager } from "./services.js";
+import { contestManager, getAllContests } from "./services.js";
 
 
 export const getCurrentContest = async (req, res) => {
@@ -57,6 +57,17 @@ export const endPreviousAndCreateNew = async (req, res) => {
     } catch (error) {
         console.log(error);
         return sendResponse(res, 500, "Internal server error", error)
+    }
+}
+
+export const getAllPrevContests = async (req, res) => {
+    try {
+        const { page = 1, records = 20 } = req.query;
+        const contests = await getAllContests(page, records);
+        sendResponse(res, 200, "Success", contests)
+    } catch (error) {
+        console.error(error);
+        sendResponse(res, 500, "Internal server error", error)
     }
 }
 

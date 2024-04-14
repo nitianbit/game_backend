@@ -1,9 +1,10 @@
 import express from 'express'
-import { endPreviousAndCreateNew, getCurrentContest } from './controllers.js';
+import { endPreviousAndCreateNew, getAllPrevContests, getCurrentContest } from './controllers.js';
 import { isValidAdmin } from '../middlewares/index.js';
 const contestRouter = express.Router();
 
 contestRouter.get("/current", getCurrentContest);
+contestRouter.get("/grid", getAllPrevContests);
 
 contestRouter.get("/modify-bet", isValidAdmin, getCurrentContest);
 //end prev contest and create new one and for this create a admin token with infinite validity and called by scheduler only
