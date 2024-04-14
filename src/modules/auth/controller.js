@@ -72,3 +72,37 @@ export const getProfile = async (req, res) => {
         return sendResponse(res, 500, "Internal Server Error", error);
     }
 }
+
+export const adminLogin = async (req, res) => {
+    try {
+        const { phone, password } = req.body;
+        if (!phone || !password) return sendResponse(res, 400, "Invalid Request. Please send all the details.");
+
+        const user = await User.findOne({ phone }).lean();
+        if (!user) {
+            return sendResponse(res, 400, "User not found.");
+        }
+        if (user.userType !== USER_TYPE.ADMIN) {
+            return sendResponse(res, 400, 'Only Admins are allowed for this operation.')
+        }
+        const isPassMatched = comparePassword(password, user.password);
+        if (!isPassMatched) {
+            return sendResponse(res, 400, "Wrong password.");
+        }
+
+        const token = createToken({
+            _id: user._id,
+            phone: user.phone,
+            countryCode: user.countryCode,
+            userType: user.userType,
+        });
+
+        return sendResponse(res, 200, "Success", {
+            token: token
+        })
+
+    } catch (error) {
+        console.log(error);
+        return sendResponse(res, 500, "Internal Server Error", error);
+    }
+}
