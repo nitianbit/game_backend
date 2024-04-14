@@ -5,7 +5,8 @@ import { getAllUsers, updateUser, deleteUser, getUser } from "./services.js";
 
 export const getUsers = async (req, res) => {
     try {
-        const users = await getAllUsers();
+        const { page = 1, records = 20 } = req.query;
+        const users = await getAllUsers(page, records);
         sendResponse(res, 200, "Success", users)
     } catch (error) {
         console.error(error);
