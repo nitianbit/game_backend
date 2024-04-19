@@ -5,10 +5,15 @@ import { contestManager, getAllContests } from "./services.js";
 export const getCurrentContest = async (req, res) => {
     try {
         const currentOnGoingContest = contestManager.currentOnGoingContest();
-        return sendResponse(200, "Success", currentOnGoingContest)
+        const betSummary =  contestManager?.getBetSummaryByNumber(currentOnGoingContest?._id);
+        const contestStatus = {
+            contest: currentOnGoingContest,
+            betSummary
+        };
+        return sendResponse(res,200, "Success", contestStatus)
     } catch (error) {
         console.log(error);
-        return sendResponse(500, "Internal server error", error)
+        return sendResponse(res,500, "Internal server error", error)
     }
 }
 

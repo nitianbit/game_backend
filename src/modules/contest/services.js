@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Bet } from "../../db/models/Bets.js";
 import { CONTEST_STATUS, Contest } from "../../db/models/Contest.js";
 import { User } from "../../db/models/User.js";
@@ -57,9 +58,9 @@ class ContestManager {
     currentOnGoingContest = () => this.data.currentContest;
 
     //in map format and each number contain total bet and total amount
-    getBetSummaryByNumber = async (contestId) => {
+    getBetSummaryByNumber = async (contestId="") => {
         const betSummary = await Bet.aggregate([
-            { $match: { contestId: mongoose.Types.ObjectId(contestId) } },
+            { $match: { contestId: new mongoose.Types.ObjectId(contestId) } },
             {
                 $group: {
                     _id: '$number',
@@ -74,9 +75,9 @@ class ContestManager {
             betSummaryMap.set(i, { totalCount: 0, totalAmount: 0 });
         }
 
-        betSummary.forEach((entry, number) => {
+        betSummary.forEach((entry) => {
             const { _id, totalCount, totalAmount } = entry;
-            betSummaryMap.set(number, { totalCount, totalAmount });
+            betSummaryMap.set(_id, { totalCount, totalAmount });
         });
 
         return betSummaryMap;
@@ -137,18 +138,23 @@ export {
 
 export const getAllContests = async (page, limit) => {
     //populate winner name maybe?
-    let request = Contest.find();
-    if (page !== -1) {
-        const skip = (page - 1) * limit;
-        request = request.skip(skip);
-    }
-    let data = {
-        rows: await request.lean()
-    }
+    try {
+        let request = Contest.find();
+        if (page !== -1) {
+            const skip = (page - 1) * limit;
+            request = request.skip(skip);
+        }
+        let data = {
+            rows: await request.lean()
+        }
 
-    if (page == 1) {
-        const total = await Contest.countDocuments();
-        data = { ...data, total };
+        if (page === 1) {
+            const total = await Contest.countDocuments();
+            data = { ...data, total };
+        }
+        return data;
+    } catch (error) {
+        console.error(error);
+        throw error;
     }
-    return data;
 }
