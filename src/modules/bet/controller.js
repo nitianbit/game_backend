@@ -1,4 +1,4 @@
-import { placeBet } from '../services/betService.js';
+import { placeBet } from './services.js';
 import { Bet } from '../models/Bet.js';
 import { Contest, CONTEST_STATUS } from '../../db/models/Contest.js';
 import { sendResponse } from '../../utils/helper.js';
@@ -31,7 +31,7 @@ export const placeBet = async (req, res) => {
             number,
             amount
         });
-        await placeBetService(bet);
+        await placeBet(bet);
         sendResponse(res, 200, "Bet placed successfully");
     } catch (error) {
         console.error(error);
