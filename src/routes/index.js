@@ -1,3 +1,4 @@
+import adminRouter from "../modules/admin/routes.js";
 import authRouter from "../modules/auth/routes.js"
 import contestRouter from "../modules/contest/routes.js";
 import { isValidAdmin } from "../modules/middlewares/index.js";
@@ -21,6 +22,10 @@ export const routes = {
         {
             path: '/api/profile',
             router: authRouter
+        },
+        {
+            path: '/api/users',
+            router: adminRouter
         },
         {
             path: '/api/sample-test-admin',
