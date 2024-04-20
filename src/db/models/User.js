@@ -8,7 +8,8 @@ const schema = new mongoose.Schema({
     balance: { type: Number, default: 0 },
     userType: { type: Number }, //user:0 or admin:1
     password: { type: String },
-    disabled: { type: Boolean, default: false }
+    disabled: { type: Boolean, default: false },
+    details: { type: mongoose.SchemaTypes.Mixed }, //{'UPI_ID':''}
 }, {
     collection: 'User',
 });
