@@ -2,7 +2,7 @@ import { User } from "../../db/models/User.js";
 
 export const getAllUsers = async (page, limit, filters = {}) => {
     //if page ==-1 return all users else pagination
-    let request = User.find(filters);
+    let request = User.find(filters).select("-password -userType");
     if (page !== -1) {
         const skip = (page - 1) * limit;
         request = request.skip(skip);

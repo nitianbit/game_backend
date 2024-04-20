@@ -25,7 +25,8 @@ export const routes = {
         },
         {
             path: '/api/users',
-            router: adminRouter
+            router: adminRouter,
+            middlewares: [isValidAdmin]
         },
         {
             path: '/api/sample-test-admin',
