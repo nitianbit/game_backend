@@ -6,7 +6,7 @@ import { getAllUsers, updateUser, deleteUser, getUser } from "./services.js";
 export const getUsers = async (req, res) => {
     try {
         const { page = 1, records = 20 } = req.query;
-        const users = await getAllUsers(page, records, { userType: USER_TYPE.USER });
+        const users = await getAllUsers(page, records, { userType: USER_TYPE.USER, disabled: false });
         sendResponse(res, 200, "Success", users)
     } catch (error) {
         console.error(error);
@@ -17,9 +17,9 @@ export const getUsers = async (req, res) => {
 export const updateSingleUser = async (req, res) => {
     try {
         const { userId } = req.params;
-        const { username, balance } = req.body;
-
-        await updateUser(userId, { username, balance });
+        // const { username, balance } = req.body;
+        // await updateUser(userId, { username, balance });
+        await updateUser(userId, req.body);
 
         return sendResponse(res, 200, "User updated successfully",)
     } catch (error) {

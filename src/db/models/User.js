@@ -7,7 +7,8 @@ const schema = new mongoose.Schema({
     createdAt: { type: Number },
     balance: { type: Number, default: 0 },
     userType: { type: Number }, //user:0 or admin:1
-    password: { type: String }
+    password: { type: String },
+    disabled: { type: Boolean, default: false }
 }, {
     collection: 'User',
 });
