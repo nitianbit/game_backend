@@ -9,7 +9,7 @@ const schema = new mongoose.Schema({
     userType: { type: Number }, //user:0 or admin:1
     password: { type: String },
     disabled: { type: Boolean, default: false },
-    details: { type: mongoose.SchemaTypes.Mixed }, //{'UPI_ID':''}
+    UPI_ID: { type: String },
 }, {
     collection: 'User',
 });
