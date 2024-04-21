@@ -5,7 +5,7 @@ import { contestManager, getAllContests } from "./services.js";
 
 export const getCurrentContest = async (req, res) => {
     try {
-        const currentOnGoingContest = contestManager.currentOnGoingContest();
+        const currentOnGoingContest = await contestManager.currentOnGoingContest();
         const betSummary = await contestManager?.getBetSummaryByNumber(currentOnGoingContest?._id);
         const contestStatus = {
             contest: currentOnGoingContest,
@@ -37,7 +37,7 @@ export const modifyContestWinningNumber = async (req, res) => {
 export const endPreviousAndCreateNew = async (req, res) => {
     try {
         //first store the cuurent contest into a variable and start a new one
-        const prevOnGoingContest = contestManager.currentOnGoingContest();
+        const prevOnGoingContest = await contestManager.currentOnGoingContest();
         //close the current contest
         if (prevOnGoingContest) {
             await contestManager.closePreviousContest(prevOnGoingContest._id);

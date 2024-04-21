@@ -55,7 +55,21 @@ class ContestManager {
         return response;
     }
 
-    currentOnGoingContest = () => this.data.currentContest;
+    currentOnGoingContest = async () => {
+        if (!this.data.currentContest) {
+            //check in db if there is current contest goingon then use that else create one
+            const currentContest = await Contest.findOne({
+                status: CONTEST_STATUS.RUNNING,
+                startTime: { $gte: now() - 1000 * 60 }
+            }).lean();
+            if (currentContest) {
+                this.data.currentContest = currentContest;
+                return currentContest;
+            }
+            return await this.startNewContest();
+        }
+        return this.data.currentContest;
+    }
 
     //in map format and each number contain total bet and total amount
     getBetSummaryByNumber = async (contestId = "") => {
