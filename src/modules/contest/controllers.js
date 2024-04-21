@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { sendResponse } from "../../utils/helper.js";
 import { contestManager, getAllContests } from "./services.js";
 
@@ -5,15 +6,15 @@ import { contestManager, getAllContests } from "./services.js";
 export const getCurrentContest = async (req, res) => {
     try {
         const currentOnGoingContest = contestManager.currentOnGoingContest();
-        const betSummary =  contestManager?.getBetSummaryByNumber(currentOnGoingContest?._id);
+        const betSummary = contestManager?.getBetSummaryByNumber(currentOnGoingContest?._id);
         const contestStatus = {
             contest: currentOnGoingContest,
             betSummary
         };
-        return sendResponse(res,200, "Success", contestStatus)
+        return sendResponse(res, 200, "Success", contestStatus)
     } catch (error) {
         console.log(error);
-        return sendResponse(res,500, "Internal server error", error)
+        return sendResponse(res, 500, "Internal server error", error)
     }
 }
 
@@ -21,7 +22,7 @@ export const getCurrentContest = async (req, res) => {
 export const modifyContestWinningNumber = async (req, res) => {
     try {
         const { contestId, winningNumber } = req.body;
-        if (!contestId) {
+        if (!contestId || !mongoose.Types.ObjectId.isValid(contestId)) {
             return sendResponse(res, 400, "Invalid request")
         }
         const response = await contestManager.updateContestWinningNumber(contestId, winningNumber);
