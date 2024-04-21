@@ -1,5 +1,4 @@
-import { placeBet } from './services.js';
-import { Bet } from '../models/Bet.js';
+import { createBet } from './services.js';
 import { Contest, CONTEST_STATUS } from '../../db/models/Contest.js';
 import { sendResponse } from '../../utils/helper.js';
 import { User } from '../../db/models/User.js';
@@ -11,7 +10,8 @@ export const placeBet = async (req, res) => {
         if (!number || !amount || number < 0 || number > 10) {
             return sendResponse(res, 400, "Invalid Bet. Please provide the correct details.");
         }
-        const currentContest = await Contest.findOne({ status: CONTEST_STATUS.RUNNING });
+        //TODO here also ftch from class instance
+        const currentContest = await Contest.findOne({ status: CONTEST_STATUS.RUNNING }).lean();
         if (!currentContest) {
             return sendResponse(res, 400, "No contest currently ongoing");
         }
@@ -25,13 +25,13 @@ export const placeBet = async (req, res) => {
             return sendResponse(res, 400, "Insufficient balance")
         }
         const contestId = currentContest._id;
-        const bet = new Bet({
+        const bet = {
             userId,
             contestId,
             number,
             amount
-        });
-        await placeBet(bet);
+        };
+        await createBet(bet);
         sendResponse(res, 200, "Bet placed successfully");
     } catch (error) {
         console.error(error);

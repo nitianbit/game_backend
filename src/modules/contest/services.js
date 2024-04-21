@@ -4,7 +4,7 @@ import { CONTEST_STATUS, Contest } from "../../db/models/Contest.js";
 import { User } from "../../db/models/User.js";
 import { now } from "../../utils/helper.js";
 
-
+//TODO handle that case that if backend collapse then current contest data will be lost so check db for current contest also using timestamp
 class ContestManager {
     constructor() {
         this.data = {
@@ -19,7 +19,7 @@ class ContestManager {
             startTime: now()
         });
         await newContest.save();
-        return newContest;
+        return newContest.toObject();
     }
 
     //db method
@@ -51,14 +51,14 @@ class ContestManager {
         const updateObj = {
             status: CONTEST_STATUS.ENDED
         };
-        const response = await updateContest(contestId, updateObj);
+        const response = await this.updateContest(contestId, updateObj);
         return response;
     }
 
     currentOnGoingContest = () => this.data.currentContest;
 
     //in map format and each number contain total bet and total amount
-    getBetSummaryByNumber = async (contestId="") => {
+    getBetSummaryByNumber = async (contestId = "") => {
         const betSummary = await Bet.aggregate([
             { $match: { contestId: new mongoose.Types.ObjectId(contestId) } },
             {
@@ -80,7 +80,7 @@ class ContestManager {
             betSummaryMap.set(_id, { totalCount, totalAmount });
         });
 
-        return betSummaryMap;
+        return Object.fromEntries(betSummaryMap);
     }
 
     calculateWinningNumber = async (contestId) => {
@@ -90,12 +90,12 @@ class ContestManager {
         const betsArray = [];
 
         //fetch the lowest amount
-        bets.forEach((bet, number) => {
+        Object.entries(bets).forEach(([betNumber, bet]) => {
             const { totalCount, totalAmount } = bet;
             if (totalAmount <= lowestAmount) {
                 lowestAmount = totalAmount;
             }
-            betsArray.push({ number, totalCount, totalAmount });
+            betsArray.push({ number: betNumber, totalCount, totalAmount });
         });
 
         const betsWithLowestAmount = betsArray.filter(bet => bet.totalAmount === lowestAmount);

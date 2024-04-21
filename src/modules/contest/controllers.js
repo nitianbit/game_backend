@@ -6,7 +6,7 @@ import { contestManager, getAllContests } from "./services.js";
 export const getCurrentContest = async (req, res) => {
     try {
         const currentOnGoingContest = contestManager.currentOnGoingContest();
-        const betSummary = contestManager?.getBetSummaryByNumber(currentOnGoingContest?._id);
+        const betSummary = await contestManager?.getBetSummaryByNumber(currentOnGoingContest?._id);
         const contestStatus = {
             contest: currentOnGoingContest,
             betSummary
