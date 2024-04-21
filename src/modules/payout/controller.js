@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { PAYOUT_STATUS, Payout } from "../../db/models/Payout.js";
 import { USER_TYPE } from "../../db/models/User.js";
 import { now, sendResponse } from "../../utils/helper.js";
@@ -52,6 +53,7 @@ export const createPayout = async (req, res) => {
 export const settlePayout = async (req, res) => {
     try {
         const payoutId = req.params.payoutId;
+        if (!mongoose.Types.ObjectId.isValid(payoutId)) return sendResponse(res, 400, "Invalid payout id");
         const payout = await Payout.findByIdAndUpdate(payoutId).lean();
         if (payout.status === PAYOUT_STATUS.SUCCESS) return sendResponse(res, 400, "Already settled");
         if (req.user.userType === USER_TYPE.USER) return sendResponse(res, 400, "Only Admin can settle payout");
