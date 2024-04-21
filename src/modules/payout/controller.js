@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { PAYOUT_STATUS, Payout } from "../../db/models/Payout.js";
-import { USER_TYPE } from "../../db/models/User.js";
+import { USER_TYPE, User } from "../../db/models/User.js";
 import { now, sendResponse } from "../../utils/helper.js";
 import { getAllPayouts } from "./service.js";
 
@@ -57,9 +57,18 @@ export const settlePayout = async (req, res) => {
         const payout = await Payout.findByIdAndUpdate(payoutId).lean();
         if (payout.status === PAYOUT_STATUS.SUCCESS) return sendResponse(res, 400, "Already settled");
         if (req.user.userType === USER_TYPE.USER) return sendResponse(res, 400, "Only Admin can settle payout");
+        const user = await User.findById(payout.userId).lean();
+        if (!user.balance) return sendResponse(res, 400, "Insufficient balance to settle payout");
+
+        const amountToTransferred = Match.min(payout.amount, user.balance);
+        user.balance = user.balance - amountToTransferred;
+        payout.amountTransferred = amountToTransferred;
+        await user.save();
+
         payout.status = PAYOUT_STATUS.SUCCESS;
         payout.completedAt = now();
         await payout.save();
+
         sendResponse(res, 200, "Success")
     } catch (error) {
         console.error(error);

@@ -6,7 +6,8 @@ const schema = new mongoose.Schema({
     user: { type: String }, //storing user name so that we don't have to populate user details in grid api
     initiatedAt: { type: Number },
     completedAt: { type: Number },
-    amount: { type: Number }
+    amount: { type: Number },
+    amountTransferred: { type: Number }
 
 }, {
     collection: 'Payout',
