@@ -15,7 +15,7 @@ export const getPayouts = async (req, res) => {
         if (req.query.status === 'success') filters.status = PAYOUT_STATUS.SUCCESS;
         if (req.user.userType === USER_TYPE.USER) filters.userId = req.user._id;
 
-        const payouts = await getAllPayouts(page, records, filters);
+        const payouts = await getAllPayouts(page, records, filters)
         sendResponse(res, 200, "Success", payouts)
     } catch (error) {
         console.error(error);
@@ -54,13 +54,13 @@ export const settlePayout = async (req, res) => {
     try {
         const payoutId = req.params.payoutId;
         if (!mongoose.Types.ObjectId.isValid(payoutId)) return sendResponse(res, 400, "Invalid payout id");
-        const payout = await Payout.findByIdAndUpdate(payoutId).lean();
+        const payout = await Payout.findByIdAndUpdate(payoutId);
         if (payout.status === PAYOUT_STATUS.SUCCESS) return sendResponse(res, 400, "Already settled");
         if (req.user.userType === USER_TYPE.USER) return sendResponse(res, 400, "Only Admin can settle payout");
-        const user = await User.findById(payout.userId).lean();
+        const user = await User.findById(payout.userId)
         if (!user.balance) return sendResponse(res, 400, "Insufficient balance to settle payout");
 
-        const amountToTransferred = Match.min(payout.amount, user.balance);
+        const amountToTransferred = Math.min(payout.amount, user.balance);
         user.balance = user.balance - amountToTransferred;
         payout.amountTransferred = amountToTransferred;
         await user.save();
