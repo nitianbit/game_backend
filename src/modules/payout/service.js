@@ -2,7 +2,10 @@ import { Payout } from "../../db/models/Payout.js";
 
 
 export const getAllPayouts = async (page, limit, filters = {}) => {
-    let request = Payout.find(filters);
+    let request = Payout.find(filters).populate({
+        path: 'userId',
+        select: '-password'
+    })
     if (page !== -1) {
         const skip = (page - 1) * limit;
         request = request.skip(skip);
