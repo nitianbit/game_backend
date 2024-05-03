@@ -3,7 +3,7 @@ import { getUsers, updateSingleUser, deleteSingleUser, getSingleUser } from './c
 const adminRouter = express.Router();
 
 adminRouter.post("/updateUser/:userId", updateSingleUser)
-adminRouter.post("/deleteUser/:userId", deleteSingleUser)
+adminRouter.delete("/deleteUser/:userId", deleteSingleUser)
 
 adminRouter.get("/grid", getUsers)
 adminRouter.get("/user/:userId", getSingleUser)
