@@ -16,10 +16,13 @@ export const getUsers = async (req, res) => {
 
 export const updateSingleUser = async (req, res) => {
     try {
-        const { userId } = req.params;
+        // const { userId } = req.params;
+        const { _id } = req.body;
+
         // const { username, balance } = req.body;
         // await updateUser(userId, { username, balance });
-        await updateUser(userId, req.body);
+        const response = await updateUser(_id, req.body);
+
 
         return sendResponse(res, 200, "User updated successfully",)
     } catch (error) {

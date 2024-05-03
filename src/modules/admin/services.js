@@ -19,7 +19,8 @@ export const getAllUsers = async (page, limit, filters = {}) => {
 }
 
 export const updateUser = async (userId, userData) => {
-    await User.findByIdAndUpdate(userId, userData).lean();
+    const response = await User.findByIdAndUpdate(userId, userData).lean();
+    return response
 }
 
 export const deleteUser = async (userId) => {
