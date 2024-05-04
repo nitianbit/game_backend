@@ -21,7 +21,10 @@ export const getCurrentContest = async (req, res) => {
 
 export const modifyContestWinningNumber = async (req, res) => {
     try {
-        const { contestId, winningNumber } = req.body;
+        const { winningNumber } = req.body;
+        const currentContest = await contestManager.getCurrentContest()
+        const contestId = currentContest?._id
+
         if (!contestId || !mongoose.Types.ObjectId.isValid(contestId)) {
             return sendResponse(res, 400, "Invalid request")
         }

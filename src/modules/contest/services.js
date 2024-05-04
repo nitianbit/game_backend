@@ -32,7 +32,7 @@ class ContestManager {
         if (this.data.currentContest) {
             const contestId = this.data.currentContest._id;
             if (id !== contestId) return null;
-            const response = await updateContest(contestId, { winningNumber, modifiedByAdmin: true });
+            const response = await this.updateContest(contestId, { winningNumber, modifiedByAdmin: true });
             return response;
         }
         return null;
@@ -138,6 +138,22 @@ class ContestManager {
             { _id: { $in: usersIds } },
             { $inc: { balance: amount } }).lean();
         return response;
+    }
+
+    getCurrentContest = async () => {
+        if (!this.data.currentContest) {
+            const currentContest = await Contest.findOne({
+                status: CONTEST_STATUS.RUNNING,
+                startTime: { $lte: now() },
+            }).lean();
+
+            if (currentContest) {
+                this.data.currentContest = currentContest;
+                return currentContest;
+            }
+            return null;
+        }
+        return this.data.currentContest;
     }
 
 
