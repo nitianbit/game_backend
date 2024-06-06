@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const schema = new mongoose.Schema({
-    status: { type: Number }, //0- initiated, 1- completed,
+    status: { type: Number }, //0- initiated, 1- completed,2-cancelled
     userId: { type: mongoose.Types.ObjectId, ref: 'User' },
     user: { type: String }, //storing user name so that we don't have to populate user details in grid api
     initiatedAt: { type: Number },

@@ -56,9 +56,9 @@ export const endPreviousAndCreateNew = async (req, res) => {
                 .then(async ({ winningNumber, winningAmount }) => {
                     await contestManager.updateContest(prevOnGoingContest._id, { winningNumber, winningAmount });
                     //TODO add some balance to the user accounts (needs to discuss what amount to be credited to user's wallet)
-                    const winnerUserIds = await contestManager.fetchWinnerUserIds(prevOnGoingContest._id, winningNumber);
-                    if (winnerUserIds.length > 0) {
-                        await contestManager.updateWinnerUserIdsBalance(winnerUserIds, winningAmount);
+                    const winners = await contestManager.fetchWinnerUserIds(prevOnGoingContest._id, winningNumber);
+                    if (winners.length > 0) {
+                        await contestManager.updateWinnerUserIdsBalance(winners);
                     }
                 })
         }
@@ -71,8 +71,8 @@ export const endPreviousAndCreateNew = async (req, res) => {
 
 export const getAllPrevContests = async (req, res) => {
     try {
-        const { page = 1, records = 20 } = req.query;
-        const contests = await getAllContests(page, records);
+        const { page = 1, records = 20, status = null } = req.query;
+        const contests = await getAllContests(page, records, status);
         sendResponse(res, 200, "Success", contests)
     } catch (error) {
         console.error(error);

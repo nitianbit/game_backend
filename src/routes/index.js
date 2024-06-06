@@ -3,6 +3,7 @@ import authRouter from "../modules/auth/routes.js"
 import contestRouter from "../modules/contest/routes.js";
 import payoutRouter from "../modules/payout/routes.js";
 import { isValidAdmin } from "../modules/middlewares/index.js";
+import paymentRouter from "../modules/payment/routes.js";
 
 
 export const routes = {
@@ -40,6 +41,10 @@ export const routes = {
         {
             path: '/api/payout',
             router: payoutRouter
+        },
+        {
+            path: '/api/payment',
+            router: paymentRouter
         }
     ],
 

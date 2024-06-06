@@ -8,7 +8,7 @@ export const getAllPayouts = async (page, limit, filters = {}) => {
     })
     if (page !== -1) {
         const skip = (page - 1) * limit;
-        request = request.skip(skip);
+        request = request.skip(skip).limit(limit);
     }
     let data = {
         rows: await request.lean()

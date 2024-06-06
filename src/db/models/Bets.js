@@ -20,6 +20,10 @@ const betSchema = new mongoose.Schema({
     amount: {
         type: Number,
         required: true
+    },
+    kind:{
+        type:Number ,//1-single bet(9.6),2-small-cap(2.4),3-mid-cap(4.8),4-large-cap(2.4)
+        default:1
     }
 }, {
     collection: 'Bets',

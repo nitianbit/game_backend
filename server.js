@@ -10,6 +10,11 @@ import settings from './settings.js';
 import { connectDB } from './src/db/index.js';
 import { authRoutes, protectedRoutes } from './src/routes/index.js';
 import { verifyToken } from "./src/modules/middlewares/index.js";
+import cron from 'node-cron';
+import { endPreviousAndCreateNew } from './src/modules/contest/controllers.js';
+import { contestManager } from './src/modules/contest/services.js';
+import PaymentTransaction from './src/db/models/PaymentTransaction.js';
+import { test } from './src/test.js';
 
 dotenv.config({ path: path.resolve(settings.PROJECT_DIR, `.env`) });
 
@@ -30,3 +35,10 @@ protectedRoutes(app)
 
 
 app.listen(CONFIG.PORT, () => console.log(`Server running on port ${CONFIG.PORT}`))
+
+// cron.schedule('* * * * *', () => {
+//     console.log('running a task every minute');
+//     endPreviousAndCreateNew()
+// });
+
+// test()
