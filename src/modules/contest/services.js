@@ -1,9 +1,12 @@
+import mongoose from "mongoose";
 import { Bet } from "../../db/models/Bets.js";
 import { CONTEST_STATUS, Contest } from "../../db/models/Contest.js";
 import { User } from "../../db/models/User.js";
 import { now } from "../../utils/helper.js";
+import { BET_TYPE } from "../../utils/constants.js";
+import fs from 'fs'
 
-
+//TODO handle that case that if backend collapse then current contest data will be lost so check db for current contest also using timestamp
 class ContestManager {
     constructor() {
         this.data = {
@@ -18,7 +21,7 @@ class ContestManager {
             startTime: now()
         });
         await newContest.save();
-        return newContest;
+        return newContest.toObject();
     }
 
     //db method
@@ -31,7 +34,7 @@ class ContestManager {
         if (this.data.currentContest) {
             const contestId = this.data.currentContest._id;
             if (id !== contestId) return null;
-            const response = await updateContest(contestId, { winningNumber, modifiedByAdmin: true });
+            const response = await this.updateContest(contestId, { winningNumber, modifiedByAdmin: true });
             return response;
         }
         return null;
@@ -50,36 +53,105 @@ class ContestManager {
         const updateObj = {
             status: CONTEST_STATUS.ENDED
         };
-        const response = await updateContest(contestId, updateObj);
+        const response = await this.updateContest(contestId, updateObj);
         return response;
     }
 
-    currentOnGoingContest = () => this.data.currentContest;
+    getPrizeByKind=(amount,kind)=>{
+        switch (kind) {
+            case BET_TYPE.SINGLE_BET:
+                return (amount*9.6).toFixed(2);
+            case BET_TYPE.SMALL_CAP:
+                return (amount*2.4).toFixed(2);
+            case BET_TYPE.MID_CAP:
+                return (amount*4.8).toFixed(2);
+            case BET_TYPE.LARGE_CAP:
+                return (amount*2.4).toFixed(2);
+            default:
+                return (amount*9.6).toFixed(2);
+        }
+    }
+
+    currentOnGoingContest = async () => {
+        if (!this.data.currentContest) {
+            //check in db if there is current contest goingon then use that else create one
+            const currentContest = await Contest.findOne({
+                status: CONTEST_STATUS.RUNNING,
+                startTime: { $gte: now() - 1000 * 60 }
+            }).lean();
+            if (currentContest) {
+                //TODO check if time not over and make the creating method single to avaoid multiple instance if both this function and scheduler run at same time
+                this.data.currentContest = currentContest;
+                return currentContest;
+            }
+            return await this.startNewContest();
+        }
+        return this.data.currentContest;
+    }
 
     //in map format and each number contain total bet and total amount
-    getBetSummaryByNumber = async (contestId) => {
+    getBetSummaryByNumber = async (contestId = "", userId = "") => {
         const betSummary = await Bet.aggregate([
-            { $match: { contestId: mongoose.Types.ObjectId(contestId) } },
+            { 
+                $match: { 
+                    contestId: new mongoose.Types.ObjectId(contestId), 
+                    ...(userId && { userId: new mongoose.Types.ObjectId(userId) }) 
+                } 
+            },
+            {
+                $addFields: {
+                    prizeMultiplier: {
+                        $switch: {
+                            branches: [
+                                { case: { $eq: ["$kind", BET_TYPE.SINGLE_BET] }, then: 9.6 },
+                                { case: { $eq: ["$kind", BET_TYPE.SMALL_CAP] }, then: 2.4 },
+                                { case: { $eq: ["$kind", BET_TYPE.MID_CAP] }, then: 4.8 },
+                                { case: { $eq: ["$kind", BET_TYPE.LARGE_CAP] }, then: 2.4 }
+                            ],
+                            default: 9.6
+                        }
+                    }
+                }
+            },
             {
                 $group: {
-                    _id: '$number',
-                    totalCount: { $sum: 1 },
-                    totalAmount: { $sum: '$amount' }
+                    _id: { number: '$number', kind: '$kind' },  // Group by both number and kind
+                    countByKind: { $sum: 1 },
+                    totalAmount: { $sum: '$amount' },
+                    totalBetAmount: { $sum: { $multiply: ['$amount', '$prizeMultiplier'] } },
+                    ...(userId && { betIds: { $push: '$_id' } })
+                }
+            },
+            {
+                $group: {
+                    _id: '$_id.number',  // Regroup by number
+                    kinds: {
+                        $push: {
+                            kind: { $toString: '$_id.kind' },  // Ensure kind is a string
+                            countByKind: '$countByKind',
+                            totalAmount: '$totalAmount',//here totalamount is for a kind
+                            totalBetAmount: '$totalBetAmount'//here totalbetamount is for a kind
+                        }
+                    },
+                    totalCount: { $sum: '$countByKind' },  // Sum counts from all kinds for the total count
+                    totalAmount: { $sum: '$totalAmount' },  // Sum total amounts from all kinds
+                    totalBetAmount: { $sum: '$totalBetAmount' },  // Sum total bet amounts from all kinds
+                    // ...(userId && { betIds: { $concatArrays: '$betIds' } })  
                 }
             }
-        ]);
+        ]);    
 
         const betSummaryMap = new Map();
-        for (let i = 1; i <= 10; i++) {
-            betSummaryMap.set(i, { totalCount: 0, totalAmount: 0 });
+        for (let i = 0; i < 9; i++) {
+            betSummaryMap.set(i, { totalCount: 0, totalAmount: 0,totalPayAbleAmount:0 });
         }
 
-        betSummary.forEach((entry, number) => {
-            const { _id, totalCount, totalAmount } = entry;
-            betSummaryMap.set(number, { totalCount, totalAmount });
+        betSummary.forEach((entry) => {
+            const { _id, totalCount, totalAmount,totalBetAmount } = entry;
+            betSummaryMap.set(_id, { totalCount, totalAmount, betIds: entry?.betIds ?? [],totalPayAbleAmount:totalBetAmount,kinds:entry?.kinds??[] });
         });
 
-        return betSummaryMap;
+        return Object.fromEntries(betSummaryMap);
     }
 
     calculateWinningNumber = async (contestId) => {
@@ -89,15 +161,15 @@ class ContestManager {
         const betsArray = [];
 
         //fetch the lowest amount
-        bets.forEach((bet, number) => {
-            const { totalCount, totalAmount } = bet;
-            if (totalAmount <= lowestAmount) {
-                lowestAmount = totalAmount;
+        Object.entries(bets).forEach(([betNumber, bet]) => {
+            const { totalCount, totalAmount ,totalPayAbleAmount} = bet;
+            if (totalPayAbleAmount <= lowestAmount) {
+                lowestAmount = totalPayAbleAmount;
             }
-            betsArray.push({ number, totalCount, totalAmount });
+            betsArray.push({ number: betNumber, totalCount, totalAmount,totalPayAbleAmount });
         });
 
-        const betsWithLowestAmount = betsArray.filter(bet => bet.totalAmount === lowestAmount);
+        const betsWithLowestAmount = betsArray.filter(bet => bet.totalPayAbleAmount === lowestAmount);
         let winningNumber = null;
 
         if (betsWithLowestAmount.length > 1) {
@@ -112,17 +184,50 @@ class ContestManager {
     }
 
     fetchWinnerUserIds = async (contestId, winningNumber) => {
-        const users = await Bet.find({ contestId, number: winningNumber }).lean();
-        if (users.length) {
-            return users.map(user => user._id);
+        const bets = await Bet.find({ contestId, number: winningNumber }).lean();
+        if (bets.length) {
+            return bets.map(bet => ({userId:bet.userId,amount:this.getPrizeByKind(bet.amount,bet.kind)}));//prize money to get if win according to bet kind
         }
         return [];
     }
-    updateWinnerUserIdsBalance = async (usersIds, amount) => {
-        const response = await User.updateMany(
-            { _id: { $in: usersIds } },
-            { $inc: { balance: amount } }).lean();
-        return response;
+    updateWinnerUserIdsBalance = async (winners) => {
+        // const response = await User.updateMany(
+        //     { _id: { $in: usersIds } },
+        //     { $inc: { balance: amount } }).lean();
+        // return response;
+        const bulkOperations = winners.map(update => ({
+            updateOne: {
+              filter: { _id: update.userId },
+              update: { $inc: { balance:  update.amount } },
+              upsert:true
+            },
+          }));
+      
+      
+          const result = await User.bulkWrite(bulkOperations);
+          console.log('Winners updated successfully:', result);
+          return result;
+    }
+
+    getCurrentContest = async () => {
+        if (!this.data.currentContest) {
+            const currentContest = await Contest.findOne({
+                status: CONTEST_STATUS.RUNNING,
+                startTime: { $lte: now() },
+            }).lean();
+
+            if (currentContest) {
+                this.data.currentContest = currentContest;
+                return currentContest;
+            }
+            return null;
+        }
+        return this.data.currentContest;
+    }
+
+    getBetSummaryUserForCurrentContest = async (userId) => {
+        const currentContest = await this.getCurrentContest();
+        return await this.getBetSummaryByNumber(currentContest._id, userId);
     }
 
 
@@ -135,20 +240,31 @@ export {
     contestManager
 };
 
-export const getAllContests = async (page, limit) => {
+export const getAllContests = async (page, limit, status = null) => {
     //populate winner name maybe?
-    let request = Contest.find();
-    if (page !== -1) {
-        const skip = (page - 1) * limit;
-        request = request.skip(skip);
-    }
-    let data = {
-        rows: await request.lean()
-    }
+    page = typeof page === 'string' ? parseInt(page) : page;
+    limit = typeof limit === 'string' ? parseInt(limit) : limit;
+    status = typeof status === 'string' ? parseInt(status) : status;
+    try {
+        let filter = {
+            ...(status && { status })
+        }
+        let request = Contest.find(filter);
+        if (page !== -1) {
+            const skip = (page - 1) * limit;
+            request = request.skip(skip).limit(limit);
+        }
+        let data = {
+            rows: await request.sort({ _id: -1 }).lean()
+        }
 
-    if (page == 1) {
-        const total = await Contest.countDocuments();
-        data = { ...data, total };
+        if (page === 1) {
+            const total = await Contest.countDocuments();
+            data = { ...data, total };
+        }
+        return data;
+    } catch (error) {
+        console.error(error);
+        throw error;
     }
-    return data;
 }

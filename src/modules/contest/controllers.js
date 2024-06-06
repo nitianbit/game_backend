@@ -1,22 +1,31 @@
+import mongoose from "mongoose";
 import { sendResponse } from "../../utils/helper.js";
 import { contestManager, getAllContests } from "./services.js";
 
 
 export const getCurrentContest = async (req, res) => {
     try {
-        const currentOnGoingContest = contestManager.currentOnGoingContest();
-        return sendResponse(200, "Success", currentOnGoingContest)
+        const currentOnGoingContest = await contestManager.currentOnGoingContest();
+        const betSummary = await contestManager?.getBetSummaryByNumber(currentOnGoingContest?._id);
+        const contestStatus = {
+            contest: currentOnGoingContest,
+            betSummary
+        };
+        return sendResponse(res, 200, "Success", contestStatus)
     } catch (error) {
         console.log(error);
-        return sendResponse(500, "Internal server error", error)
+        return sendResponse(res, 500, "Internal server error", error)
     }
 }
 
 
 export const modifyContestWinningNumber = async (req, res) => {
     try {
-        const { contestId, winningNumber } = req.body;
-        if (!contestId) {
+        const { winningNumber } = req.body;
+        const currentContest = await contestManager.getCurrentContest()
+        const contestId = currentContest?._id
+
+        if (!contestId || !mongoose.Types.ObjectId.isValid(contestId)) {
             return sendResponse(res, 400, "Invalid request")
         }
         const response = await contestManager.updateContestWinningNumber(contestId, winningNumber);
@@ -31,7 +40,7 @@ export const modifyContestWinningNumber = async (req, res) => {
 export const endPreviousAndCreateNew = async (req, res) => {
     try {
         //first store the cuurent contest into a variable and start a new one
-        const prevOnGoingContest = contestManager.currentOnGoingContest();
+        const prevOnGoingContest = await contestManager.currentOnGoingContest();
         //close the current contest
         if (prevOnGoingContest) {
             await contestManager.closePreviousContest(prevOnGoingContest._id);
@@ -47,9 +56,9 @@ export const endPreviousAndCreateNew = async (req, res) => {
                 .then(async ({ winningNumber, winningAmount }) => {
                     await contestManager.updateContest(prevOnGoingContest._id, { winningNumber, winningAmount });
                     //TODO add some balance to the user accounts (needs to discuss what amount to be credited to user's wallet)
-                    const winnerUserIds = await contestManager.fetchWinnerUserIds(prevOnGoingContest._id, winningNumber);
-                    if (winnerUserIds.length > 0) {
-                        await contestManager.updateWinnerUserIdsBalance(winnerUserIds, winningAmount);
+                    const winners = await contestManager.fetchWinnerUserIds(prevOnGoingContest._id, winningNumber);
+                    if (winners.length > 0) {
+                        await contestManager.updateWinnerUserIdsBalance(winners);
                     }
                 })
         }
@@ -62,8 +71,8 @@ export const endPreviousAndCreateNew = async (req, res) => {
 
 export const getAllPrevContests = async (req, res) => {
     try {
-        const { page = 1, records = 20 } = req.query;
-        const contests = await getAllContests(page, records);
+        const { page = 1, records = 20, status = null } = req.query;
+        const contests = await getAllContests(page, records, status);
         sendResponse(res, 200, "Success", contests)
     } catch (error) {
         console.error(error);
