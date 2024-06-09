@@ -1,7 +1,9 @@
+import adminRouter from "../modules/admin/routes.js";
 import authRouter from "../modules/auth/routes.js"
 import contestRouter from "../modules/contest/routes.js";
+import payoutRouter from "../modules/payout/routes.js";
 import { isValidAdmin } from "../modules/middlewares/index.js";
-
+import paymentRouter from "../modules/payment/routes.js";
 
 
 export const routes = {
@@ -23,6 +25,11 @@ export const routes = {
             router: authRouter
         },
         {
+            path: '/api/users',
+            router: adminRouter,
+            middlewares: [isValidAdmin]
+        },
+        {
             path: '/api/sample-test-admin',
             router: authRouter,
             middlewares: [isValidAdmin]
@@ -30,6 +37,14 @@ export const routes = {
         {
             path: '/api/contest',
             router: contestRouter
+        },
+        {
+            path: '/api/payout',
+            router: payoutRouter
+        },
+        {
+            path: '/api/payment',
+            router: paymentRouter
         }
     ],
 

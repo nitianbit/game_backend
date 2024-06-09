@@ -6,7 +6,7 @@ const saltRounds = 10;
 const salt = bcrypt.genSaltSync(saltRounds);
 
 
-export const createToken = (data) => jwt.sign(data, CONFIG.JWT_SECRET_KEY, { expiresIn: "10h" });
+export const createToken = (data) => jwt.sign(data, CONFIG.JWT_SECRET_KEY/* , { expiresIn: "10h" } */);
 
 export const decodeToken = (token) => {
     try {

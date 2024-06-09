@@ -22,6 +22,7 @@ export const isValidAdmin = (req, res, next) => {
     try {
         const user = req.user;
         if (!user.isAdmin) return sendResponse(res, 401, "You are not allowded to perform this action.");
+        next();
     } catch (error) {
         console.log(error)
         return sendResponse(res, 500, "Internal Server Error", error);

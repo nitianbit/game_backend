@@ -1,4 +1,4 @@
-import { User } from "../../db/models/User.js";
+import { USER_TYPE, User } from "../../db/models/User.js";
 import { sendResponse } from "../../utils/helper.js";
 import { getAllUsers, updateUser, deleteUser, getUser } from "./services.js";
 
@@ -6,7 +6,7 @@ import { getAllUsers, updateUser, deleteUser, getUser } from "./services.js";
 export const getUsers = async (req, res) => {
     try {
         const { page = 1, records = 20 } = req.query;
-        const users = await getAllUsers(page, records);
+        const users = await getAllUsers(page, records, { userType: USER_TYPE.USER });
         sendResponse(res, 200, "Success", users)
     } catch (error) {
         console.error(error);
@@ -17,9 +17,11 @@ export const getUsers = async (req, res) => {
 export const updateSingleUser = async (req, res) => {
     try {
         const { userId } = req.params;
-        const { username, balance } = req.body;
 
-        await updateUser(userId, { username, balance });
+        // const { username, balance } = req.body;
+        // await updateUser(userId, { username, balance });
+        const response = await updateUser(userId, req.body);
+
 
         return sendResponse(res, 200, "User updated successfully",)
     } catch (error) {
