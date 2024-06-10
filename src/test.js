@@ -14,10 +14,9 @@ const testWinners=async()=>{
 
 const testSummary=async()=>{
     try {
-        const contestId="665c0ad8ce229463d235067a"
+        const contestId="666727747bc1f07041bd18e4"
         const bets = await contestManager.getBetSummaryByNumber({contestId});
         console.log(bets)
-        return;
 
         contestManager.calculateWinningNumber(contestId)
         .then(async ({ winningNumber, winningAmount }) => {

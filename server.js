@@ -41,4 +41,4 @@ app.listen(CONFIG.PORT, () => console.log(`Server running on port ${CONFIG.PORT}
 //     endPreviousAndCreateNew()
 // });
 
-// test()
+test()

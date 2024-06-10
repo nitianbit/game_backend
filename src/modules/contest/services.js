@@ -117,9 +117,9 @@ class ContestManager {
                         $switch: {
                             branches: [
                                 { case: { $eq: ["$kind", BET_TYPE.SINGLE_BET] }, then: 9.6 },
-                                { case: { $eq: ["$kind", BET_TYPE.SMALL_CAP] }, then: 2.4 },
-                                { case: { $eq: ["$kind", BET_TYPE.MID_CAP] }, then: 4.8 },
-                                { case: { $eq: ["$kind", BET_TYPE.LARGE_CAP] }, then: 2.4 }
+                                { case: { $eq: ["$kind", BET_TYPE.SMALL_CAP] }, then: 2.4*4 },
+                                { case: { $eq: ["$kind", BET_TYPE.MID_CAP] }, then: 4.8*2 },
+                                { case: { $eq: ["$kind", BET_TYPE.LARGE_CAP] }, then: 2.4*4 }
                             ],
                             default: 9.6
                         }
@@ -199,6 +199,7 @@ class ContestManager {
         //store winning data {winningNumber & winningAmount} also
         const derievedData= this.getDerievedNumber(betSummary)
         storage.setKey(`${STORAGE_KEYS.DERIEVED}_${contestId}`,derievedData);
+        return betSummary;
 
     }
 
