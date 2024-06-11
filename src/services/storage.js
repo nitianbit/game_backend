@@ -8,7 +8,7 @@ class Storage {
         try {
             const response = cache.set(key, value,70);
             //delete in 70 seconds
-            console.log("key set successfully for...", key)
+            // console.log("key set successfully for...", key)
         } catch (error) {
             console.log(error);
         }
@@ -17,7 +17,7 @@ class Storage {
     getKey = (key) => {
         try {
             let value = cache.get(key);
-            console.log("key retrieved for ",key)
+            // console.log("key retrieved for ",key)
             return value;
         } catch (error) {
             console.log("Error Saving Redis.")

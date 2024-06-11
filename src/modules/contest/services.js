@@ -198,7 +198,12 @@ class ContestManager {
         storage.setKey(`${STORAGE_KEYS.BET_SUMMARY}_${contestId}`,betSummary);
         //store winning data {winningNumber & winningAmount} also
         const derievedData= this.getDerievedNumber(betSummary)
-        storage.setKey(`${STORAGE_KEYS.DERIEVED}_${contestId}`,derievedData);
+        const derivedKey=`${STORAGE_KEYS.DERIEVED}_${contestId}`;
+        console.log("derivedKey",derivedKey,storage.isKeyExists(derivedKey))
+        if(!storage.isKeyExists(derivedKey)){
+            console.log("setting derived key",derievedData)
+            storage.setKey(derivedKey,derievedData);
+        }
         return betSummary;
 
     }
@@ -237,12 +242,18 @@ class ContestManager {
             return { winningNumber:null, winningAmount: null }
         }
         const derievedCache=storage.getKey(`${STORAGE_KEYS.DERIEVED}_${contestId}`)
+        console.log({derievedCache})
         if(derievedCache){
             return derievedCache;
         }
         const bets = await this.getBetSummaryByNumber({contestId});
         const derievedData= this.getDerievedNumber(bets)
-        storage.setKey(`${STORAGE_KEYS.DERIEVED}_${contestId}`,derievedData);
+        const derivedKey=`${STORAGE_KEYS.DERIEVED}_${contestId}`;
+        if(!storage.isKeyExists(derivedKey)){
+           // storage.setKey(derivedKey,derievedData);
+           console.log("setting derived key 2",derievedData)
+           storage.setKey(`${STORAGE_KEYS.DERIEVED}_${contestId}`,derievedData);
+        }
         return derievedData;
 
     }

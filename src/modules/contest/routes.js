@@ -1,11 +1,13 @@
 import express from 'express'
-import { endPreviousAndCreateNew, getAllPrevContests, getCurrentContest, modifyContestWinningNumber } from './controllers.js';
+import { endPreviousAndCreateNew, getAllPrevContests, getCurrentContest, getderievedNumber, getpreviousContestWinning, modifyContestWinningNumber } from './controllers.js';
 import { isValidAdmin } from '../middlewares/index.js';
 import { betSummaryofUser, cancelBet, placeBet } from '../bet/controller.js';
 const contestRouter = express.Router();
 
 contestRouter.get("/current", getCurrentContest);
 contestRouter.get("/grid", getAllPrevContests);
+contestRouter.get("/derived", getderievedNumber);
+contestRouter.get("/prev-contest-winning", getpreviousContestWinning);
 
 contestRouter.post("/place-bet", placeBet);
 contestRouter.post("/cancel-bet", cancelBet);

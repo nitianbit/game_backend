@@ -1,19 +1,64 @@
 import mongoose from "mongoose";
 import { obfuscateNumber, sendResponse } from "../../utils/helper.js";
 import { contestManager, getAllContests } from "./services.js";
+import { CONTEST_STATUS, Contest } from "../../db/models/Contest.js";
+import { Bet } from "../../db/models/Bets.js";
 
 
 export const getCurrentContest = async (req, res) => {
     try {
         const currentOnGoingContest = await contestManager.currentOnGoingContest();
         const betSummary = await contestManager?.getBetSummaryByNumber({contestId:currentOnGoingContest?._id});
-        console.log("getCurrentContest calculating winning number",currentOnGoingContest?._id)
+        console.log("getCurrentContest calculating winning number",currentOnGoingContest?._id?.toString())
         const {winningNumber}=await contestManager.calculateWinningNumber(currentOnGoingContest?._id);
-        const prevContest=
         console.log(winningNumber)
         const contestStatus = {
             contest: currentOnGoingContest,
             betSummary,
+            derieved:obfuscateNumber(winningNumber)
+        };
+        return sendResponse(res, 200, "Success", contestStatus)
+    } catch (error) {
+        console.log(error);
+        return sendResponse(res, 500, "Internal server error", error)
+    }
+}
+
+export const getderievedNumber = async (req, res) => {
+    try {
+        const { contest_id } = req.query;
+        const {winningNumber}=await contestManager.calculateWinningNumber(contest_id);
+
+        const contestStatus = {
+            derieved:obfuscateNumber(winningNumber)
+        };
+        return sendResponse(res, 200, "Success", contestStatus)
+    } catch (error) {
+        console.log(error);
+        return sendResponse(res, 500, "Internal server error", error)
+    }
+}
+
+export const getpreviousContestWinning = async (req, res) => {
+    try {
+       const userId=req.user?._id;
+       const previousContest=await Contest.find({status:CONTEST_STATUS.ENDED}).sort({_id:-1}).limit(1).lean()
+       if(!previousContest){
+        return sendResponse(res, 200, "Success", {
+            value:0
+        })
+       }
+       const {winningNumber}=await contestManager.calculateWinningNumber(previousContest?._id)
+        const bets = await Bet.find({ contestId:previousContest?._id, number: winningNumber,userId }).lean();
+       const total=0;
+       if (bets.length) {
+           return bets.map(bet => {total+=contestManager.getPrizeByKind(bet.amount,bet.kind)});//prize money to get if win according to bet kind
+       }
+       return sendResponse(res, 200, "Success", {
+        value:total
+    })
+
+        const contestStatus = {
             derieved:obfuscateNumber(winningNumber)
         };
         return sendResponse(res, 200, "Success", contestStatus)
