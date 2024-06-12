@@ -14,7 +14,7 @@ const testWinners=async()=>{
 
 const testSummary=async()=>{
     try {
-        const contestId="666727747bc1f07041bd18e4"
+        const contestId="66687b11ad8eaf7cb461caa4"
         const bets = await contestManager.getBetSummaryByNumber({contestId});
         console.log(bets)
 

@@ -42,17 +42,18 @@ export const getderievedNumber = async (req, res) => {
 export const getpreviousContestWinning = async (req, res) => {
     try {
        const userId=req.user?._id;
-       const previousContest=await Contest.find({status:CONTEST_STATUS.ENDED}).sort({_id:-1}).limit(1).lean()
+       const previousContest=await Contest.findOne({status:CONTEST_STATUS.ENDED}).sort({_id:-1}).limit(1).lean()
        if(!previousContest){
         return sendResponse(res, 200, "Success", {
             value:0
         })
        }
-       const {winningNumber}=await contestManager.calculateWinningNumber(previousContest?._id)
-        const bets = await Bet.find({ contestId:previousContest?._id, number: winningNumber,userId }).lean();
-       const total=0;
+        const bets = await Bet.find({ contestId:previousContest?._id, number: previousContest?.winningNumber,userId }).lean();
+       let total=0;
        if (bets.length) {
-           return bets.map(bet => {total+=contestManager.getPrizeByKind(bet.amount,bet.kind)});//prize money to get if win according to bet kind
+            // bets.map(bet => {total+=contestManager.getPrizeByKind(bet.amount,bet.kind)});//prize money to get if win according to bet kind
+           total= bets.reduce((prev, curr) => prev + parseFloat(contestManager.getPrizeByKind(curr.amount,curr.kind)??0), 0);
+          
        }
        return sendResponse(res, 200, "Success", {
         value:total

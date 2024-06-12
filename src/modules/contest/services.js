@@ -32,8 +32,10 @@ class ContestManager {
     }
 
     updateContestWinningNumber = async (id, winningNumber) => {
-        if (this.data.currentContest) {
-            const contestId = this.data.currentContest._id;
+        
+        if (storage.isKeyExists(STORAGE_KEYS.CURRENT_CONTEST)) {
+            const currentContest = storage.get(STORAGE_KEYS.CURRENT_CONTEST);
+            const contestId = currentContest?._id;
             if (id !== contestId) return null;
             const response = await this.updateContest(contestId, { winningNumber, modifiedByAdmin: true });
             return response;
@@ -42,11 +44,12 @@ class ContestManager {
     }
 
     startNewContest = async (hardUpdate = false) => {
-        if (!this.data.currentContest || hardUpdate) {
+        if (!storage.isKeyExists(STORAGE_KEYS.CURRENT_CONTEST) || hardUpdate) {
             const newContest = await this.createContest();
-            this.data.currentContest = newContest;
+            storage.setKey(STORAGE_KEYS.CURRENT_CONTEST, newContest);
+            return newContest;
         }
-        return this.data.currentContest;
+        return storage.get(STORAGE_KEYS.CURRENT_CONTEST);
     }
 
     closePreviousContest = async (contestId) => {
@@ -90,7 +93,7 @@ class ContestManager {
             }).lean();
             return currentContest;
         }
-        if (!this.data.currentContest) {
+        if (!storage.isKeyExists(STORAGE_KEYS.CURRENT_CONTEST)) {
             //check in db if there is current contest goingon then use that else create one
             const currentContest = await Contest.findOne({
                 status: CONTEST_STATUS.RUNNING,
@@ -98,12 +101,16 @@ class ContestManager {
             }).lean();
             if (currentContest) {
                 //TODO check if time not over and make the creating method single to avaoid multiple instance if both this function and scheduler run at same time
-                this.data.currentContest = currentContest;
-                return this.returnValidContest(currentContest)
+                let contest=this.returnValidContest(currentContest)
+                if(contest){
+                    storage.setKey(STORAGE_KEYS.CURRENT_CONTEST,contest)
+                    return contest;
+                }
+                return null
             }
             return await this.startNewContest();
         }
-        return this.returnValidContest(this.data.currentContest);
+        return this.returnValidContest(storage.getKey(STORAGE_KEYS.CURRENT_CONTEST));
     }
 
     performAggregation=async(matchCondition)=>{
@@ -176,8 +183,6 @@ class ContestManager {
 
         //checking if storing in userId or overall (for user we will store it like BET_SUMMARY_CONTEST_USERID)
         if(fromCache && storage.getKey(key)){
-            console.log("key not found for ",fromCache,key)
-            //if fromcache and updateCache is false  
             return storage.getKey(key);
         }
         if(userId){
@@ -199,11 +204,9 @@ class ContestManager {
         //store winning data {winningNumber & winningAmount} also
         const derievedData= this.getDerievedNumber(betSummary)
         const derivedKey=`${STORAGE_KEYS.DERIEVED}_${contestId}`;
-        console.log("derivedKey",derivedKey,storage.isKeyExists(derivedKey))
-        if(!storage.isKeyExists(derivedKey)){
-            console.log("setting derived key",derievedData)
-            storage.setKey(derivedKey,derievedData);
-        }
+         // if(!storage.isKeyExists(derivedKey)){
+             storage.setKey(derivedKey,derievedData);
+        // }
         return betSummary;
 
     }
@@ -237,12 +240,10 @@ class ContestManager {
     }
 
     calculateWinningNumber = async (contestId) => {
-        console.log("calculating winning number",contestId);
         if(!contestId){
             return { winningNumber:null, winningAmount: null }
         }
         const derievedCache=storage.getKey(`${STORAGE_KEYS.DERIEVED}_${contestId}`)
-        console.log({derievedCache})
         if(derievedCache){
             return derievedCache;
         }
@@ -250,8 +251,6 @@ class ContestManager {
         const derievedData= this.getDerievedNumber(bets)
         const derivedKey=`${STORAGE_KEYS.DERIEVED}_${contestId}`;
         if(!storage.isKeyExists(derivedKey)){
-           // storage.setKey(derivedKey,derievedData);
-           console.log("setting derived key 2",derievedData)
            storage.setKey(`${STORAGE_KEYS.DERIEVED}_${contestId}`,derievedData);
         }
         return derievedData;
@@ -266,10 +265,6 @@ class ContestManager {
         return [];
     }
     updateWinnerUserIdsBalance = async (winners) => {
-        // const response = await User.updateMany(
-        //     { _id: { $in: usersIds } },
-        //     { $inc: { balance: amount } }).lean();
-        // return response;
         const bulkOperations = winners.map(update => ({
             updateOne: {
               filter: { _id: update.userId },
@@ -280,24 +275,23 @@ class ContestManager {
       
       
           const result = await User.bulkWrite(bulkOperations);
-          console.log('Winners updated successfully:', result);
           return result;
     }
 
     getCurrentContest = async () => {
-        if (!this.data.currentContest) {
+        if (!storage.isKeyExists(STORAGE_KEYS.CURRENT_CONTEST)) {
             const currentContest = await Contest.findOne({
                 status: CONTEST_STATUS.RUNNING,
                 startTime: { $lte: now() },
             }).lean();
 
             if (currentContest) {
-                this.data.currentContest = currentContest;
+                storage.setKey(STORAGE_KEYS.CURRENT_CONTEST, currentContest);
                 return currentContest;
             }
             return null;
         }
-        return this.data.currentContest;
+        return storage.getKey(STORAGE_KEYS.CURRENT_CONTEST);
     }
 
     getBetSummaryUserForCurrentContest = async ({userId,fromCache=true}) => {
