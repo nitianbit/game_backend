@@ -27,7 +27,7 @@ class ContestManager {
 
     //db method
     updateContest = async (contestId, updatedData) => {
-        const response = await Contest.findByIdAndUpdate(contestId, updatedData);
+        const response = await Contest.findByIdAndUpdate(contestId, updatedData, { new: true });
         return response;
     }
 
@@ -239,10 +239,31 @@ class ContestManager {
         return { winningNumber, winningAmount: lowestAmount };
     }
 
+    getAmountForNumber = (number, bets) => {//betSummary
+        if (!bets) {
+            return { winningNumber: number, winningAmount: null }
+        }
+        const betsArray = [];
+
+
+        const betsWithLowestAmount = betsArray.filter(bet => bet._id === number);
+        return { winningNumber: number, winningAmount: betsWithLowestAmount };
+    }
+
     calculateWinningNumber = async (contestId) => {
+        const contest = await Contest.findById(contestId);
+        if (!contest) return null;
+
         if (!contestId) {
             return { winningNumber: null, winningAmount: null }
         }
+
+        if (contest?.modifiedByAdmin && contest?.winningNumber !== undefined) {
+            const bets = await this.getBetSummaryByNumber({ contestId });
+            const { winningNumber, winningAmount } = this.getAmountForNumber(contest?.winningNumber, bets)
+            return { winningNumber, winningAmount };
+        }
+
         const derievedCache = storage.getKey(`${STORAGE_KEYS.DERIEVED}_${contestId}`)
         if (derievedCache) {
             return derievedCache;
@@ -254,7 +275,6 @@ class ContestManager {
             storage.setKey(`${STORAGE_KEYS.DERIEVED}_${contestId}`, derievedData);
         }
         return derievedData;
-
     }
 
     fetchWinnerUserIds = async (contestId, winningNumber) => {
@@ -298,9 +318,6 @@ class ContestManager {
         const currentContest = await this.getCurrentContest();
         return await this.getBetSummaryByNumber({ contestId: currentContest._id, userId, fromCache });
     }
-
-
-
 }
 
 const contestManager = new ContestManager();
