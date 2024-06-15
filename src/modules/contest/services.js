@@ -162,7 +162,7 @@ class ContestManager {
         ]);    
 
         const betSummaryMap = new Map();
-        for (let i = 0; i < 9; i++) {
+        for (let i = 0; i <= 9; i++) {
             betSummaryMap.set(i, { totalCount: 0, totalAmount: 0,totalPayAbleAmount:0 });
         }
 
