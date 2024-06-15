@@ -27,7 +27,7 @@ class ContestManager {
 
     //db method
     updateContest = async (contestId, updatedData) => {
-        const response = git await Contest.findByIdAndUpdate(contestId, updatedData);
+        const response = await Contest.findByIdAndUpdate(contestId, updatedData);
         return response;
     }
 
