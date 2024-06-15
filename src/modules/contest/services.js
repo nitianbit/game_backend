@@ -27,14 +27,14 @@ class ContestManager {
 
     //db method
     updateContest = async (contestId, updatedData) => {
-        const response = await Contest.findByIdAndUpdate(contestId, updatedData);
+        const response = git await Contest.findByIdAndUpdate(contestId, updatedData);
         return response;
     }
 
     updateContestWinningNumber = async (id, winningNumber) => {
-        
+
         if (storage.isKeyExists(STORAGE_KEYS.CURRENT_CONTEST)) {
-            const currentContest = storage.get(STORAGE_KEYS.CURRENT_CONTEST);
+            const currentContest = storage.getKey(STORAGE_KEYS.CURRENT_CONTEST);
             const contestId = currentContest?._id;
             if (id !== contestId) return null;
             const response = await this.updateContest(contestId, { winningNumber, modifiedByAdmin: true });
@@ -61,32 +61,32 @@ class ContestManager {
         return response;
     }
 
-    returnValidContest=(contest)=>{//check contest s bet only allowed for 55 seconds 
-        const currentTime=now();
-        const {startTime}=contest;
-        if(currentTime<=(startTime+55)){//as bet only allowed for 55 seconds
-           return contest;
+    returnValidContest = (contest) => {//check contest s bet only allowed for 55 seconds 
+        const currentTime = now();
+        const { startTime } = contest;
+        if (currentTime <= (startTime + 55)) {//as bet only allowed for 55 seconds
+            return contest;
         }
         return null
     }
 
-    getPrizeByKind=(amount,kind)=>{
+    getPrizeByKind = (amount, kind) => {
         switch (kind) {
             case BET_TYPE.SINGLE_BET:
-                return (amount*9.6).toFixed(2);
+                return (amount * 9.6).toFixed(2);
             case BET_TYPE.SMALL_CAP:
-                return (amount*2.4*4).toFixed(2);
+                return (amount * 2.4 * 4).toFixed(2);
             case BET_TYPE.MID_CAP:
-                return (amount*4.8*2).toFixed(2);
+                return (amount * 4.8 * 2).toFixed(2);
             case BET_TYPE.LARGE_CAP:
-                return (amount*2.4*4).toFixed(2);
+                return (amount * 2.4 * 4).toFixed(2);
             default:
-                return (amount*9.6).toFixed(2);
+                return (amount * 9.6).toFixed(2);
         }
     }
 
-    currentOnGoingContest = async(fromDb=false) => {
-        if(fromDb){
+    currentOnGoingContest = async (fromDb = false) => {
+        if (fromDb) {
             const currentContest = await Contest.findOne({
                 status: CONTEST_STATUS.RUNNING,
                 startTime: { $gte: now() - 70 }//to make su
@@ -101,9 +101,9 @@ class ContestManager {
             }).lean();
             if (currentContest) {
                 //TODO check if time not over and make the creating method single to avaoid multiple instance if both this function and scheduler run at same time
-                let contest=this.returnValidContest(currentContest)
-                if(contest){
-                    storage.setKey(STORAGE_KEYS.CURRENT_CONTEST,contest)
+                let contest = this.returnValidContest(currentContest)
+                if (contest) {
+                    storage.setKey(STORAGE_KEYS.CURRENT_CONTEST, contest)
                     return contest;
                 }
                 return null
@@ -113,10 +113,10 @@ class ContestManager {
         return this.returnValidContest(storage.getKey(STORAGE_KEYS.CURRENT_CONTEST));
     }
 
-    performAggregation=async(matchCondition)=>{
+    performAggregation = async (matchCondition) => {
         const betSummary = await Bet.aggregate([
-            { 
-                $match: matchCondition 
+            {
+                $match: matchCondition
             },
             {
                 $addFields: {
@@ -124,9 +124,9 @@ class ContestManager {
                         $switch: {
                             branches: [
                                 { case: { $eq: ["$kind", BET_TYPE.SINGLE_BET] }, then: 9.6 },
-                                { case: { $eq: ["$kind", BET_TYPE.SMALL_CAP] }, then: 2.4*4 },
-                                { case: { $eq: ["$kind", BET_TYPE.MID_CAP] }, then: 4.8*2 },
-                                { case: { $eq: ["$kind", BET_TYPE.LARGE_CAP] }, then: 2.4*4 }
+                                { case: { $eq: ["$kind", BET_TYPE.SMALL_CAP] }, then: 2.4 * 4 },
+                                { case: { $eq: ["$kind", BET_TYPE.MID_CAP] }, then: 4.8 * 2 },
+                                { case: { $eq: ["$kind", BET_TYPE.LARGE_CAP] }, then: 2.4 * 4 }
                             ],
                             default: 9.6
                         }
@@ -159,72 +159,72 @@ class ContestManager {
                     // ...(userId && { betIds: { $concatArrays: '$betIds' } })  
                 }
             }
-        ]);    
+        ]);
 
         const betSummaryMap = new Map();
-        for (let i = 0; i < 9; i++) {
-            betSummaryMap.set(i, { totalCount: 0, totalAmount: 0,totalPayAbleAmount:0 });
+        for (let i = 0; i <= 9; i++) {
+            betSummaryMap.set(i, { totalCount: 0, totalAmount: 0, totalPayAbleAmount: 0 });
         }
 
         betSummary.forEach((entry) => {
-            const { _id, totalCount, totalAmount,totalBetAmount } = entry;
-            betSummaryMap.set(_id, { totalCount, totalAmount, betIds: entry?.betIds ?? [],totalPayAbleAmount:totalBetAmount,kinds:entry?.kinds??[] });
+            const { _id, totalCount, totalAmount, totalBetAmount } = entry;
+            betSummaryMap.set(_id, { totalCount, totalAmount, betIds: entry?.betIds ?? [], totalPayAbleAmount: totalBetAmount, kinds: entry?.kinds ?? [] });
         });
 
         return Object.fromEntries(betSummaryMap);
     }
 
     //in map format and each number contain total bet and total amount
-    getBetSummaryByNumber = async ({contestId = "", userId = "",fromCache=true}) => {
-        if(!contestId)return null;
+    getBetSummaryByNumber = async ({ contestId = "", userId = "", fromCache = true }) => {
+        if (!contestId) return null;
 
         //if previously stored return from bet_summary
-        const key=userId?`${STORAGE_KEYS.BET_SUMMARY}_${contestId}_${userId}`:`${STORAGE_KEYS.BET_SUMMARY}_${contestId}`;
+        const key = userId ? `${STORAGE_KEYS.BET_SUMMARY}_${contestId}_${userId}` : `${STORAGE_KEYS.BET_SUMMARY}_${contestId}`;
 
         //checking if storing in userId or overall (for user we will store it like BET_SUMMARY_CONTEST_USERID)
-        if(fromCache && storage.getKey(key)){
+        if (fromCache && storage.getKey(key)) {
             return storage.getKey(key);
         }
-        if(userId){
-            const matchedCondition={ 
-                contestId: new mongoose.Types.ObjectId(contestId), 
-                ...(userId && { userId: new mongoose.Types.ObjectId(userId) }) 
+        if (userId) {
+            const matchedCondition = {
+                contestId: new mongoose.Types.ObjectId(contestId),
+                ...(userId && { userId: new mongoose.Types.ObjectId(userId) })
             }
-           const userBetSummary=await this.performAggregation(matchedCondition);//aggregate for user speific summary
+            const userBetSummary = await this.performAggregation(matchedCondition);//aggregate for user speific summary
             //store in node-cache also  
-            storage.setKey(`${STORAGE_KEYS.BET_SUMMARY}_${contestId}_${userId}`,userBetSummary);//set user key
+            storage.setKey(`${STORAGE_KEYS.BET_SUMMARY}_${contestId}_${userId}`, userBetSummary);//set user key
         }
 
-        const contestCondition={ 
+        const contestCondition = {
             contestId: new mongoose.Types.ObjectId(contestId)
         }
-        const betSummary=await this.performAggregation(contestCondition);//aggregate for contest
+        const betSummary = await this.performAggregation(contestCondition);//aggregate for contest
         //store overall summary
-        storage.setKey(`${STORAGE_KEYS.BET_SUMMARY}_${contestId}`,betSummary);
+        storage.setKey(`${STORAGE_KEYS.BET_SUMMARY}_${contestId}`, betSummary);
         //store winning data {winningNumber & winningAmount} also
-        const derievedData= this.getDerievedNumber(betSummary)
-        const derivedKey=`${STORAGE_KEYS.DERIEVED}_${contestId}`;
-         // if(!storage.isKeyExists(derivedKey)){
-             storage.setKey(derivedKey,derievedData);
+        const derievedData = this.getDerievedNumber(betSummary)
+        const derivedKey = `${STORAGE_KEYS.DERIEVED}_${contestId}`;
+        // if(!storage.isKeyExists(derivedKey)){
+        storage.setKey(derivedKey, derievedData);
         // }
         return betSummary;
 
     }
 
-    getDerievedNumber=(bets)=>{//betSummary
-        if(!bets){
-            return { winningNumber:null, winningAmount: null }
+    getDerievedNumber = (bets) => {//betSummary
+        if (!bets) {
+            return { winningNumber: null, winningAmount: null }
         }
         let lowestAmount = Infinity;
         const betsArray = [];
 
         //fetch the lowest amount
         Object.entries(bets).forEach(([betNumber, bet]) => {
-            const { totalCount, totalAmount ,totalPayAbleAmount} = bet;
+            const { totalCount, totalAmount, totalPayAbleAmount } = bet;
             if (totalPayAbleAmount <= lowestAmount) {
                 lowestAmount = totalPayAbleAmount;
             }
-            betsArray.push({ number: betNumber, totalCount, totalAmount,totalPayAbleAmount });
+            betsArray.push({ number: betNumber, totalCount, totalAmount, totalPayAbleAmount });
         });
 
         const betsWithLowestAmount = betsArray.filter(bet => bet.totalPayAbleAmount === lowestAmount);
@@ -240,18 +240,18 @@ class ContestManager {
     }
 
     calculateWinningNumber = async (contestId) => {
-        if(!contestId){
-            return { winningNumber:null, winningAmount: null }
+        if (!contestId) {
+            return { winningNumber: null, winningAmount: null }
         }
-        const derievedCache=storage.getKey(`${STORAGE_KEYS.DERIEVED}_${contestId}`)
-        if(derievedCache){
+        const derievedCache = storage.getKey(`${STORAGE_KEYS.DERIEVED}_${contestId}`)
+        if (derievedCache) {
             return derievedCache;
         }
-        const bets = await this.getBetSummaryByNumber({contestId});
-        const derievedData= this.getDerievedNumber(bets)
-        const derivedKey=`${STORAGE_KEYS.DERIEVED}_${contestId}`;
-        if(!storage.isKeyExists(derivedKey)){
-           storage.setKey(`${STORAGE_KEYS.DERIEVED}_${contestId}`,derievedData);
+        const bets = await this.getBetSummaryByNumber({ contestId });
+        const derievedData = this.getDerievedNumber(bets)
+        const derivedKey = `${STORAGE_KEYS.DERIEVED}_${contestId}`;
+        if (!storage.isKeyExists(derivedKey)) {
+            storage.setKey(`${STORAGE_KEYS.DERIEVED}_${contestId}`, derievedData);
         }
         return derievedData;
 
@@ -260,22 +260,22 @@ class ContestManager {
     fetchWinnerUserIds = async (contestId, winningNumber) => {
         const bets = await Bet.find({ contestId, number: winningNumber }).lean();
         if (bets.length) {
-            return bets.map(bet => ({userId:bet.userId,amount:this.getPrizeByKind(bet.amount,bet.kind)}));//prize money to get if win according to bet kind
+            return bets.map(bet => ({ userId: bet.userId, amount: this.getPrizeByKind(bet.amount, bet.kind) }));//prize money to get if win according to bet kind
         }
         return [];
     }
     updateWinnerUserIdsBalance = async (winners) => {
         const bulkOperations = winners.map(update => ({
             updateOne: {
-              filter: { _id: update.userId },
-              update: { $inc: { balance:  update.amount } },
-              upsert:true
+                filter: { _id: update.userId },
+                update: { $inc: { balance: update.amount } },
+                upsert: true
             },
-          }));
-      
-      
-          const result = await User.bulkWrite(bulkOperations);
-          return result;
+        }));
+
+
+        const result = await User.bulkWrite(bulkOperations);
+        return result;
     }
 
     getCurrentContest = async () => {
@@ -294,9 +294,9 @@ class ContestManager {
         return storage.getKey(STORAGE_KEYS.CURRENT_CONTEST);
     }
 
-    getBetSummaryUserForCurrentContest = async ({userId,fromCache=true}) => {
+    getBetSummaryUserForCurrentContest = async ({ userId, fromCache = true }) => {
         const currentContest = await this.getCurrentContest();
-        return await this.getBetSummaryByNumber({contestId:currentContest._id, userId,fromCache});
+        return await this.getBetSummaryByNumber({ contestId: currentContest._id, userId, fromCache });
     }
 
 
