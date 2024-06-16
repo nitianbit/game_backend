@@ -244,10 +244,16 @@ class ContestManager {
             return { winningNumber: number, winningAmount: null }
         }
         const betsArray = [];
+        Object.entries(bets).forEach(([betNumber, bet]) => {
+            const { totalCount, totalAmount, totalPayAbleAmount } = bet;
+            betsArray.push({ number: betNumber, totalCount, totalAmount, totalPayAbleAmount });
+        });
 
 
-        const betsWithLowestAmount = betsArray.filter(bet => bet._id === number);
-        return { winningNumber: number, winningAmount: betsWithLowestAmount };
+        const betsWithLowestAmount = betsArray.find(bet => bet?.number == number);
+
+
+        return { winningNumber: number, winningAmount: betsWithLowestAmount?.totalPayAbleAmount };
     }
 
     calculateWinningNumber = async (contestId) => {
