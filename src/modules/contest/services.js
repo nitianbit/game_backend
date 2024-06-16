@@ -64,7 +64,7 @@ class ContestManager {
     returnValidContest = (contest) => {//check contest s bet only allowed for 55 seconds 
         const currentTime = now();
         const { startTime } = contest;
-        if (currentTime <= (startTime + 55)) {//as bet only allowed for 55 seconds
+        if (currentTime <= (startTime + 60)) {//as bet only allowed for 55 seconds
             return contest;
         }
         return null
