@@ -1,7 +1,7 @@
 import PaymentTransaction from "../../db/models/PaymentTransaction.js";
 import { sendResponse } from "../../utils/helper.js";
 import { checkRazorpayOrderAndUpdate, createorder, generateSignature } from "./services.js";
-
+import { CONFIG } from "../../config/config.js";
 
 
 
@@ -22,7 +22,7 @@ export const initiatePayment = async (req, res) => {
         });
         await paymentTransaction.save();
         //save order in db
-        sendResponse(res, 200, 'Payment Initiated', order)
+         sendResponse(res, 200, 'Payment Initiated', {...order,key:CONFIG.RAZORPAY_KEY})
     } catch (error) {
         console.log(error);
         sendResponse(res, 500, 'Something went wrong', error);
