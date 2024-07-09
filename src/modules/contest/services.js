@@ -36,7 +36,12 @@ class ContestManager {
         if (storage.isKeyExists(STORAGE_KEYS.CURRENT_CONTEST)) {
             const currentContest = storage.getKey(STORAGE_KEYS.CURRENT_CONTEST);
             const contestId = currentContest?._id;
-            if (id !== contestId) return null;
+            const providedIdString = id.toString().trim();
+            const contestIdString = contestId.toString().trim();
+             if (providedIdString !== contestIdString) {
+                 return null;
+             }
+            //if (id !== contestId) return null;
             const response = await this.updateContest(contestId, { winningNumber, modifiedByAdmin: true });
             return response;
         }
