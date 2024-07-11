@@ -35,10 +35,11 @@ export const createPayout = async (req, res) => {
             amount
         }
         if (UPI_ID) {
-            data = {
-                ...data,
-                UPI_ID
-            }
+            // data = {
+            //     ...data,
+            //     UPI_ID
+            // }
+           await User.findByIdAndUpdate(userId, { UPI_ID });
         }
         data = { ...data, userId, status: PAYOUT_STATUS.CREATED, initiatedAt: now() }
         const payout = await Payout.create(data);
