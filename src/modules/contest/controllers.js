@@ -98,9 +98,18 @@ export const endPreviousAndCreateNew = async (req, res) => {
         //close the current contest
         if (prevOnGoingContest) {
             await contestManager.closePreviousContest(prevOnGoingContest._id);
+            await contestManager.startNewContest(true);
         }
-        //create a new contest
-        const currentOnGoingContest = await contestManager.startNewContest(true);
+        //if no contest is there in db with live status 
+        //improve this later
+        if (!prevOnGoingContest) {
+            const contests = await Contest.findOne({ status: 1 }).sort({ _id: -1 }).lean();
+            if (!contests) {
+                //create a new contest
+                await contestManager.startNewContest(true);
+            }
+        }
+      
 
         //update prev contest winners here and update winning number if not updated by admin
         //doing it in then/catch to send resposne to schduler
@@ -109,6 +118,7 @@ export const endPreviousAndCreateNew = async (req, res) => {
             console.log("endPreviousAndCreateNew calculating winning number", prevOnGoingContest?._id)
             contestManager.calculateWinningNumber(prevOnGoingContest._id)
                 .then(async ({ winningNumber, winningAmount }) => {
+                    console.log({ winningNumber, winningAmount })
                     await contestManager.updateContest(prevOnGoingContest._id, { winningNumber, winningAmount });
                     //TODO add some balance to the user accounts (needs to discuss what amount to be credited to user's wallet)
                     const winners = await contestManager.fetchWinnerUserIds(prevOnGoingContest._id, winningNumber);

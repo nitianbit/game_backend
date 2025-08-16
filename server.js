@@ -15,6 +15,8 @@ import { endPreviousAndCreateNew } from './src/modules/contest/controllers.js';
 import { contestManager } from './src/modules/contest/services.js';
 import PaymentTransaction from './src/db/models/PaymentTransaction.js';
 import { test } from './src/test.js';
+import { encryptPassword } from './src/modules/auth/services.js';
+import { CronExpression } from './src/utils/constants.js';
 
 dotenv.config({ path: path.resolve(settings.PROJECT_DIR, `.env`) });
 
@@ -36,8 +38,8 @@ protectedRoutes(app)
 
 app.listen(CONFIG.PORT, () => console.log(`Server running on port ${CONFIG.PORT}`))
 
-cron.schedule('* * * * *', () => {
-    console.log('running a task every minute');
+cron.schedule(CronExpression.EVERY_5_SECONDS, () => {
+    console.log('running a task every minute',new Date());
     endPreviousAndCreateNew()
 });
 
