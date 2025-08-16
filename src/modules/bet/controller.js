@@ -61,7 +61,7 @@ export const cancelBet = async (req, res) => {
     try {
         const userId = req.user?._id;
         const { number, betIds,all=false } = req.body;
-        if ((number==null || number==undefined || (!betIds?.length)) && !all) {
+        if (((number==null || number==undefined) && (!betIds?.length)) && !all) {
             return sendResponse(res, 400, "Invalid Bet. Please provide the correct details.");
         }
         const currentContest = await contestManager.currentOnGoingContest();
@@ -79,6 +79,16 @@ export const cancelBet = async (req, res) => {
             const betSummary = await contestManager.getBetSummaryUserForCurrentContest({userId,fromCache:false})//update cache
             sendResponse(res, 200, "Bet cancelled successfully", betSummary);
             return
+        }else if(number){
+            const bets =await Bet.find({userId,number:number,contestId: currentContest._id}).lean()
+            let amountToAdd = 0;
+            if (bets.length) {
+                amountToAdd = bets.reduce((curr, prev) => curr + prev?.amount, 0)
+            }
+            await Bet.deleteMany({ userId, number: number, contestId: currentContest._id });
+            await User.findByIdAndUpdate(userId, { $inc: { balance: amountToAdd } });
+            const betSummary = await contestManager.getBetSummaryUserForCurrentContest({userId,fromCache:false})//update cache
+            return sendResponse(res, 200, "Bet cancelled successfully", betSummary);
         }
         const bet=await Bet.findOneAndDelete({ _id: { $in: betIds }, userId }).lean()
         await User.findByIdAndUpdate(userId, { $inc: {balance: bet.amount} });

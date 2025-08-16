@@ -36,9 +36,9 @@ protectedRoutes(app)
 
 app.listen(CONFIG.PORT, () => console.log(`Server running on port ${CONFIG.PORT}`))
 
-// cron.schedule('* * * * *', () => {
-//     console.log('running a task every minute');
-//     endPreviousAndCreateNew()
-// });
+cron.schedule('* * * * *', () => {
+    console.log('running a task every minute');
+    endPreviousAndCreateNew()
+});
 
 test()
