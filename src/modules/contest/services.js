@@ -94,16 +94,16 @@ class ContestManager {
         if (fromDb) {
             const currentContest = await Contest.findOne({
                 status: CONTEST_STATUS.RUNNING,
-                startTime: { $lte: now() - 60 , $gte :now() - 75}//to make su
+                startTime: { $lte: now() - 68 , $gte :now() - 80}//to make su
             }).lean();
-            console.log(now() - 60,currentContest?.startTime,currentContest?._id?.toString())
+            console.log(now() - 65,currentContest?.startTime,currentContest?._id?.toString())
             return currentContest;
         }
         if (!storage.isKeyExists(STORAGE_KEYS.CURRENT_CONTEST)) {
             //check in db if there is current contest goingon then use that else create one
             const currentContest = await Contest.findOne({
                 status: CONTEST_STATUS.RUNNING,
-                startTime: { $lte: now() - 60 , $gte :now() - 75}
+                startTime: { $lte: now() - 68 , $gte :now() - 75}
             }).lean();
             if (currentContest) {
                 //TODO check if time not over and make the creating method single to avaoid multiple instance if both this function and scheduler run at same time
