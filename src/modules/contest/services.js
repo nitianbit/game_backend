@@ -78,7 +78,7 @@ class ContestManager {
     getPrizeByKind = (amount, kind) => {
         switch (kind) {
             case BET_TYPE.SINGLE_BET:
-                return (amount * 9.6).toFixed(2);
+                return (amount * 9.0).toFixed(2);
             case BET_TYPE.SMALL_CAP:
                 return (amount * 2.4 * 4).toFixed(2);
             case BET_TYPE.MID_CAP:
@@ -86,7 +86,7 @@ class ContestManager {
             case BET_TYPE.LARGE_CAP:
                 return (amount * 2.4 * 4).toFixed(2);
             default:
-                return (amount * 9.6).toFixed(2);
+                return (amount * 9.0).toFixed(2);
         }
     }
 
