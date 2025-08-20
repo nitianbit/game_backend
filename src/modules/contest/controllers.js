@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { obfuscateNumber, sendResponse } from "../../utils/helper.js";
+import { obfuscateNumber, sendGameSocket, sendResponse } from "../../utils/helper.js";
 import { contestManager, getAllContests } from "./services.js";
 import { CONTEST_STATUS, Contest } from "../../db/models/Contest.js";
 import { Bet } from "../../db/models/Bets.js";
@@ -99,10 +99,10 @@ export const endPreviousAndCreateNew = async (req, res) => {
         const prevOnGoingContest = await contestManager.currentOnGoingContest(true);
         //close the current contest
         if (prevOnGoingContest) {
-            socketService.emitSocket(SOCKET_EVENTS.GAME_END, prevOnGoingContest)
+            sendGameSocket(SOCKET_EVENTS.GAME_END, prevOnGoingContest)
             await contestManager.closePreviousContest(prevOnGoingContest._id);
             const newContest = await contestManager.startNewContest(true);
-            socketService.emitSocket(SOCKET_EVENTS.GAME_START, newContest)
+            sendGameSocket(SOCKET_EVENTS.GAME_START, newContest);
         }
         //if no contest is there in db with live status 
         //improve this later
@@ -123,7 +123,7 @@ export const endPreviousAndCreateNew = async (req, res) => {
             contestManager.calculateWinningNumber(prevOnGoingContest._id)
                 .then(async ({ winningNumber, winningAmount }) => {
                     console.log({ winningNumber, winningAmount })
-                    socketService.emitSocket(SOCKET_EVENTS.WINNING_NUMBER,{winningNumber})
+                    sendGameSocket(SOCKET_EVENTS.WINNING_NUMBER,{winningNumber})
                     await contestManager.updateContest(prevOnGoingContest._id, { winningNumber, winningAmount });
                     //TODO add some balance to the user accounts (needs to discuss what amount to be credited to user's wallet)
                     const winners = await contestManager.fetchWinnerUserIds(prevOnGoingContest._id, winningNumber);

@@ -1,4 +1,7 @@
 
+import lodash from 'lodash';
+import socketService from '../services/socket.js';
+
 export const sendResponse = (res, statusCode, message, data = null) => {
     res.status(statusCode).json({
         success: statusCode >= 200 && statusCode < 300,
@@ -22,3 +25,7 @@ export const deobfuscateNumber = (obfuscatedNumber) => {
     const offset = 1234;  // Same constant offset used for obfuscation
     return (obfuscatedNumber - offset) / factor;
 };
+
+export const sendGameSocket = lodash.throttle(socketService.emitSocket,3000)
+
+
