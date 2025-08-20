@@ -7,11 +7,16 @@ import { decodeToken } from "../auth/services.js";
 export const verifyToken = (req, res, next) => {
     try {
         const token = req.headers['authorization'];
-        if (!token) return sendResponse(res, 401, "UnAuthorized.");
-        const decodedData = decodeToken(token);
-        if (!decodedData.success) return sendResponse(res, 401, "UnAuthorized.");
-        req.user = { ...decodedData.data, isAdmin: decodedData.data.userType === USER_TYPE.ADMIN };
-        next();
+         if (token) {
+      const decodedData = decodeToken(token);
+      if (decodedData.success) {
+        req.user = {
+          ...decodedData.data,
+          isAdmin: decodedData.data.userType === USER_TYPE.ADMIN
+        };
+      }
+    }
+    return next();
     } catch (error) {
         console.log(error)
         return sendResponse(res, 500, "Internal Server Error", error);
