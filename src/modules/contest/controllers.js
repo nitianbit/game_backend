@@ -99,10 +99,10 @@ export const endPreviousAndCreateNew = async (req, res) => {
         const prevOnGoingContest = await contestManager.currentOnGoingContest(true);
         //close the current contest
         if (prevOnGoingContest) {
-            sendGameSocket(SOCKET_EVENTS.GAME_END, prevOnGoingContest)
+            socketService.emitSocket(SOCKET_EVENTS.GAME_END, prevOnGoingContest)
             await contestManager.closePreviousContest(prevOnGoingContest._id);
             const newContest = await contestManager.startNewContest(true);
-            sendGameSocket(SOCKET_EVENTS.GAME_START, newContest);
+            socketService.emitSocket(SOCKET_EVENTS.GAME_START, newContest);
         }
         //if no contest is there in db with live status 
         //improve this later
@@ -123,7 +123,7 @@ export const endPreviousAndCreateNew = async (req, res) => {
             contestManager.calculateWinningNumber(prevOnGoingContest._id)
                 .then(async ({ winningNumber, winningAmount }) => {
                     console.log({ winningNumber, winningAmount })
-                    sendGameSocket(SOCKET_EVENTS.WINNING_NUMBER,{winningNumber})
+                    socketService.emitSocket(SOCKET_EVENTS.WINNING_NUMBER,{winningNumber})
                     await contestManager.updateContest(prevOnGoingContest._id, { winningNumber, winningAmount });
                     //TODO add some balance to the user accounts (needs to discuss what amount to be credited to user's wallet)
                     const winners = await contestManager.fetchWinnerUserIds(prevOnGoingContest._id, winningNumber);
