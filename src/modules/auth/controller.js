@@ -52,7 +52,7 @@ export const signup = async (req, res) => {
             phone: phone,
             password: hashedPassword,
             countryCode: 91,
-            // userType: xApiKey === 'web' ? USER_TYPE.ADMIN : USER_TYPE.USER
+            userType: USER_TYPE.USER
         })
         await newUser.save();
         return sendResponse(res, 200, "Success. User Registed", {})
