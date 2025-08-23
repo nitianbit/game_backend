@@ -32,7 +32,8 @@ export const getPaymentReceivedByRazorpay = async (order_id) => {
 export const checkRazorpayOrderAndUpdate = async (paymentTransaction) => {
     if (paymentTransaction != null && paymentTransaction.transactionDetails != null && paymentTransaction.transactionDetails["id"]) {
         const isPaid = await getPaymentReceivedByRazorpay(paymentTransaction.transactionDetails["id"]);
-        if (isPaid) {
+        const isAlreadyProcessed=await PaymentTransaction.findById(paymentTransaction._id).lean();
+        if (isPaid && isAlreadyProcessed?.status!==1) {
             await PaymentTransaction.findByIdAndUpdate(paymentTransaction._id, { fundReceived: true, status: 1 });
             await User.findByIdAndUpdate(paymentTransaction.userId, { $inc: { balance: paymentTransaction.amount } })
             //TODO add payment in user's account

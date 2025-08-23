@@ -7,61 +7,78 @@ import { Bet } from '../../db/models/Bets.js';
 import { BET_TYPE } from '../../utils/constants.js';
 
 export const placeBet = async (req, res) => {
-    try {
-        const userId = req.user?._id;
-        const { number, amount,numbers=[],kind=BET_TYPE.SINGLE_BET } = req.body;
-        if(!amount){
-            return sendResponse(res, 400, "Invalid Bet. Please provide the valid amount.");
-        }
-        if( kind==BET_TYPE.SINGLE_BET &&( (number < 0 || number > 10) || number===undefined || number ==null) ){
-            return sendResponse(res, 400, "Invalid Bet. Please provide the valid number.");
-        }
-        if(kind>BET_TYPE.SINGLE_BET && !numbers?.length){
-            return sendResponse(res, 400, "Invalid Bet. Please provide the valid numbers.");
-        }
-        //TODO here also ftch from class instance
-        const currentContest = await contestManager.currentOnGoingContest();
-        if (!currentContest) {
-            return sendResponse(res, 400, "No contest currently ongoing");
-        }
-        if (!userId) {
-            return sendResponse(res, 400, "Invalid user");
-        }
-        const user = await User.findById(userId).lean()
-        if(!user){
-            return sendResponse(res,404,'User not Found')
-        }
-        //check balance of user also
-        //here we can also add min amount in contest
-        if (user.balance < amount) {
-            return sendResponse(res, 400, "Insufficient balance")
-        }
-        const contestId = currentContest._id;
-        const bet = {
-            userId,
-            contestId,
-            ...((kind==BET_TYPE.SINGLE_BET) && { number }),
-            amount:numbers?.length>0?(amount/(numbers.length)):amount
-        };
-        if (numbers.length) {
-            await Promise.all(numbers.map((number) => createBet({...bet,number,kind})))
-        }else{
-            await createBet(bet);
-        }
-        await User.findByIdAndUpdate(user._id, { balance: user.balance - amount });
-        //get bet summary and return
-        const betSummary = await contestManager.getBetSummaryUserForCurrentContest({userId,fromCache:false})//update cache
-        sendResponse(res, 200, `Bet placed successfully on ${kind!==BET_TYPE.SINGLE_BET?numbers.join(','):number} of amount ${amount}`, betSummary);
-    } catch (error) {
-        console.error(error);
-        return sendResponse(res, 500, "Internal server error", error);
+  try {
+    const userId = req.user?._id;
+    const { number, amount, numbers = [], kind = BET_TYPE.SINGLE_BET } = req.body;
+
+    if (!userId) return sendResponse(res, 400, "Invalid user");
+    if (!amount || amount <= 0) return sendResponse(res, 400, "Invalid amount");
+
+    // validate numbers
+    if (kind === BET_TYPE.SINGLE_BET) {
+      if (number === undefined || number === null || number < 0 || number > 10) {
+        return sendResponse(res, 400, "Invalid number");
+      }
+    } else if (!numbers?.length) {
+      return sendResponse(res, 400, "Invalid numbers");
     }
+
+    // get contest
+    const currentContest = await contestManager.currentOnGoingContest();
+    if (!currentContest) return sendResponse(res, 400, "No contest currently ongoing");
+
+    const contestId = currentContest._id;
+
+    // 🔥 Atomic balance check + deduction
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: userId, balance: { $gte: amount } }, // condition: balance >= amount
+      { $inc: { balance: -amount } },             // atomic deduction
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return sendResponse(res, 400, "Insufficient balance");
+    }
+
+    // create bet(s)
+    const bet = {
+      userId,
+      contestId,
+      amount: numbers?.length > 0 ? amount / numbers.length : amount,
+      kind
+    };
+
+    if (numbers.length) {
+      await Promise.all(numbers.map(num => createBet({ ...bet, number: num })));
+    } else {
+      await createBet({ ...bet, number });
+    }
+
+    // get updated bet summary
+    const betSummary = await contestManager.getBetSummaryUserForCurrentContest({
+      userId,
+      fromCache: false
+    });
+
+    return sendResponse(
+      res,
+      200,
+      `Bet placed successfully on ${
+        kind !== BET_TYPE.SINGLE_BET ? numbers.join(",") : number
+      } of amount ${amount}`,
+      { balance: updatedUser.balance, betSummary }
+    );
+  } catch (error) {
+    console.error("placeBet error:", error);
+    return sendResponse(res, 500, "Internal server error", error);
+  }
 };
+
 export const cancelBet = async (req, res) => {
     try {
         const userId = req.user?._id;
         const { number, betIds,all=false } = req.body;
-        if ((number==null || number==undefined || (!betIds?.length)) && !all) {
+        if (((number==null || number==undefined) && (!betIds?.length)) && !all) {
             return sendResponse(res, 400, "Invalid Bet. Please provide the correct details.");
         }
         const currentContest = await contestManager.currentOnGoingContest();
@@ -79,6 +96,16 @@ export const cancelBet = async (req, res) => {
             const betSummary = await contestManager.getBetSummaryUserForCurrentContest({userId,fromCache:false})//update cache
             sendResponse(res, 200, "Bet cancelled successfully", betSummary);
             return
+        }else if(number){
+            const bets =await Bet.find({userId,number:number,contestId: currentContest._id}).lean()
+            let amountToAdd = 0;
+            if (bets.length) {
+                amountToAdd = bets.reduce((curr, prev) => curr + prev?.amount, 0)
+            }
+            await Bet.deleteMany({ userId, number: number, contestId: currentContest._id });
+            await User.findByIdAndUpdate(userId, { $inc: { balance: amountToAdd } });
+            const betSummary = await contestManager.getBetSummaryUserForCurrentContest({userId,fromCache:false})//update cache
+            return sendResponse(res, 200, "Bet cancelled successfully", betSummary);
         }
         const bet=await Bet.findOneAndDelete({ _id: { $in: betIds }, userId }).lean()
         await User.findByIdAndUpdate(userId, { $inc: {balance: bet.amount} });

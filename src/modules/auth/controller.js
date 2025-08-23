@@ -52,7 +52,7 @@ export const signup = async (req, res) => {
             phone: phone,
             password: hashedPassword,
             countryCode: 91,
-            userType: xApiKey === 'web' ? USER_TYPE.ADMIN : USER_TYPE.USER
+            userType: USER_TYPE.USER
         })
         await newUser.save();
         return sendResponse(res, 200, "Success. User Registed", {})
@@ -101,6 +101,24 @@ export const adminLogin = async (req, res) => {
             token: token
         })
 
+    } catch (error) {
+        console.log(error);
+        return sendResponse(res, 500, "Internal Server Error", error);
+    }
+}
+
+export const forgotPassword = async (req, res) => {
+    try {
+        const { phone, password } = req.body;
+        if (!phone || !password ) return sendResponse(res, 400, "Invalid Request. Please send all the details.");
+
+        const user = await User.findOne({ phone }).lean();
+        if (!user) {
+            return sendResponse(res, 400, "User not Found.");
+        }
+        const hashedPassword = encryptPassword(password);
+        await User.findOneAndUpdate({ phone }, { password: hashedPassword });
+        return sendResponse(res, 200, "Success. Password Reset Successful", {})
     } catch (error) {
         console.log(error);
         return sendResponse(res, 500, "Internal Server Error", error);

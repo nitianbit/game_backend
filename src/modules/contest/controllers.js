@@ -1,21 +1,26 @@
 import mongoose from "mongoose";
-import { obfuscateNumber, sendResponse } from "../../utils/helper.js";
+import { obfuscateNumber, sendGameSocket, sendResponse } from "../../utils/helper.js";
 import { contestManager, getAllContests } from "./services.js";
 import { CONTEST_STATUS, Contest } from "../../db/models/Contest.js";
 import { Bet } from "../../db/models/Bets.js";
+import { SOCKET_EVENTS } from "../../utils/constants.js";
+import socketService from "../../services/socket.js";
 
 
 export const getCurrentContest = async (req, res) => {
     try {
         const currentOnGoingContest = await contestManager.currentOnGoingContest();
-        const betSummary = await contestManager?.getBetSummaryByNumber({contestId:currentOnGoingContest?._id});
-        console.log("getCurrentContest calculating winning number",currentOnGoingContest?._id?.toString())
-        const {winningNumber}=await contestManager.calculateWinningNumber(currentOnGoingContest?._id);
+        if (!currentOnGoingContest) {
+            return sendResponse(res, 404, "No ongoing contest found");
+        }
+        const betSummary = await contestManager?.getBetSummaryByNumber({ contestId: currentOnGoingContest?._id });
+        console.log("getCurrentContest calculating winning number", currentOnGoingContest?._id?.toString())
+        const { winningNumber } = await contestManager.calculateWinningNumber(currentOnGoingContest?._id);
         console.log(winningNumber)
         const contestStatus = {
             contest: currentOnGoingContest,
             betSummary,
-            derieved:obfuscateNumber(winningNumber)
+            derieved: obfuscateNumber(winningNumber)
         };
         return sendResponse(res, 200, "Success", contestStatus)
     } catch (error) {
@@ -27,10 +32,10 @@ export const getCurrentContest = async (req, res) => {
 export const getderievedNumber = async (req, res) => {
     try {
         const { contest_id } = req.query;
-        const {winningNumber}=await contestManager.calculateWinningNumber(contest_id);
+        const { winningNumber } = await contestManager.calculateWinningNumber(contest_id);
 
         const contestStatus = {
-            derieved:obfuscateNumber(winningNumber)
+            derieved: obfuscateNumber(winningNumber)
         };
         return sendResponse(res, 200, "Success", contestStatus)
     } catch (error) {
@@ -41,26 +46,26 @@ export const getderievedNumber = async (req, res) => {
 
 export const getpreviousContestWinning = async (req, res) => {
     try {
-       const userId=req.user?._id;
-       const previousContest=await Contest.findOne({status:CONTEST_STATUS.ENDED}).sort({_id:-1}).limit(1).lean()
-       if(!previousContest){
-        return sendResponse(res, 200, "Success", {
-            value:0
-        })
-       }
-        const bets = await Bet.find({ contestId:previousContest?._id, number: previousContest?.winningNumber,userId }).lean();
-       let total=0;
-       if (bets.length) {
+        const userId = req.user?._id;
+        const previousContest = await Contest.findOne({ status: CONTEST_STATUS.ENDED }).sort({ _id: -1 }).limit(1).lean()
+        if (!previousContest) {
+            return sendResponse(res, 200, "Success", {
+                value: 0
+            })
+        }
+        const bets = await Bet.find({ contestId: previousContest?._id, number: previousContest?.winningNumber, userId }).lean();
+        let total = 0;
+        if (bets.length) {
             // bets.map(bet => {total+=contestManager.getPrizeByKind(bet.amount,bet.kind)});//prize money to get if win according to bet kind
-           total= bets.reduce((prev, curr) => prev + parseFloat(contestManager.getPrizeByKind(curr.amount,curr.kind)??0), 0);
-          
-       }
-       return sendResponse(res, 200, "Success", {
-        value:total
-    })
+            total = bets.reduce((prev, curr) => prev + parseFloat(contestManager.getPrizeByKind(curr.amount, curr.kind) ?? 0), 0);
+
+        }
+        return sendResponse(res, 200, "Success", {
+            value: total
+        })
 
         const contestStatus = {
-            derieved:obfuscateNumber(winningNumber)
+            derieved: obfuscateNumber(winningNumber)
         };
         return sendResponse(res, 200, "Success", contestStatus)
     } catch (error) {
@@ -94,18 +99,31 @@ export const endPreviousAndCreateNew = async (req, res) => {
         const prevOnGoingContest = await contestManager.currentOnGoingContest(true);
         //close the current contest
         if (prevOnGoingContest) {
+            socketService.emitSocket(SOCKET_EVENTS.GAME_END, prevOnGoingContest)
             await contestManager.closePreviousContest(prevOnGoingContest._id);
+            const newContest = await contestManager.startNewContest(true);
+            socketService.emitSocket(SOCKET_EVENTS.GAME_START, newContest);
         }
-        //create a new contest
-        const currentOnGoingContest = await contestManager.startNewContest(true);
+        //if no contest is there in db with live status 
+        //improve this later
+        if (!prevOnGoingContest) {
+            const contests = await Contest.findOne({ status: 1 }).sort({ _id: -1 }).lean();
+            if (!contests) {
+                //create a new contest
+                await contestManager.startNewContest(true);
+            }
+        }
+      
 
         //update prev contest winners here and update winning number if not updated by admin
         //doing it in then/catch to send resposne to schduler
         if (prevOnGoingContest) {
             //get the winning number
-            console.log("endPreviousAndCreateNew calculating winning number",prevOnGoingContest?._id)
+            console.log("endPreviousAndCreateNew calculating winning number", prevOnGoingContest?._id)
             contestManager.calculateWinningNumber(prevOnGoingContest._id)
                 .then(async ({ winningNumber, winningAmount }) => {
+                    console.log({ winningNumber, winningAmount })
+                    socketService.emitSocket(SOCKET_EVENTS.WINNING_NUMBER,{winningNumber})
                     await contestManager.updateContest(prevOnGoingContest._id, { winningNumber, winningAmount });
                     //TODO add some balance to the user accounts (needs to discuss what amount to be credited to user's wallet)
                     const winners = await contestManager.fetchWinnerUserIds(prevOnGoingContest._id, winningNumber);
@@ -114,13 +132,13 @@ export const endPreviousAndCreateNew = async (req, res) => {
                     }
                 })
         }
-        if(res){
+        if (res) {
             return sendResponse(res, 200, "Success")
         }
     } catch (error) {
         console.log(error);
-        if(res)
-        return sendResponse(res, 500, "Internal server error", error)
+        if (res)
+            return sendResponse(res, 500, "Internal server error", error)
     }
 }
 

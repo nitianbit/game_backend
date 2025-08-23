@@ -27,7 +27,7 @@ class ContestManager {
 
     //db method
     updateContest = async (contestId, updatedData) => {
-        const response = await Contest.findByIdAndUpdate(contestId, updatedData);
+        const response = await Contest.findByIdAndUpdate(contestId, updatedData, { new: true });
         return response;
     }
 
@@ -36,7 +36,12 @@ class ContestManager {
         if (storage.isKeyExists(STORAGE_KEYS.CURRENT_CONTEST)) {
             const currentContest = storage.getKey(STORAGE_KEYS.CURRENT_CONTEST);
             const contestId = currentContest?._id;
-            if (id !== contestId) return null;
+            const providedIdString = id.toString().trim();
+            const contestIdString = contestId.toString().trim();
+             if (providedIdString !== contestIdString) {
+                 return null;
+             }
+            //if (id !== contestId) return null;
             const response = await this.updateContest(contestId, { winningNumber, modifiedByAdmin: true });
             return response;
         }
@@ -73,7 +78,7 @@ class ContestManager {
     getPrizeByKind = (amount, kind) => {
         switch (kind) {
             case BET_TYPE.SINGLE_BET:
-                return (amount * 9.6).toFixed(2);
+                return (amount * 9.0).toFixed(2);
             case BET_TYPE.SMALL_CAP:
                 return (amount * 2.4 * 4).toFixed(2);
             case BET_TYPE.MID_CAP:
@@ -81,7 +86,7 @@ class ContestManager {
             case BET_TYPE.LARGE_CAP:
                 return (amount * 2.4 * 4).toFixed(2);
             default:
-                return (amount * 9.6).toFixed(2);
+                return (amount * 9.0).toFixed(2);
         }
     }
 
@@ -89,7 +94,7 @@ class ContestManager {
         if (fromDb) {
             const currentContest = await Contest.findOne({
                 status: CONTEST_STATUS.RUNNING,
-                startTime: { $gte: now() - 70 }//to make su
+                startTime: { $lte: now() - 60 , $gte :now() - 80}//to make su
             }).lean();
             return currentContest;
         }
@@ -97,7 +102,7 @@ class ContestManager {
             //check in db if there is current contest goingon then use that else create one
             const currentContest = await Contest.findOne({
                 status: CONTEST_STATUS.RUNNING,
-                startTime: { $gte: now() - 60 }
+                startTime: { $lte: now() - 60 , $gte :now() - 75}
             }).lean();
             if (currentContest) {
                 //TODO check if time not over and make the creating method single to avaoid multiple instance if both this function and scheduler run at same time
@@ -239,10 +244,37 @@ class ContestManager {
         return { winningNumber, winningAmount: lowestAmount };
     }
 
+    getAmountForNumber = (number, bets) => {//betSummary
+        if (!bets) {
+            return { winningNumber: number, winningAmount: null }
+        }
+        const betsArray = [];
+        Object.entries(bets).forEach(([betNumber, bet]) => {
+            const { totalCount, totalAmount, totalPayAbleAmount } = bet;
+            betsArray.push({ number: betNumber, totalCount, totalAmount, totalPayAbleAmount });
+        });
+
+
+        const betsWithLowestAmount = betsArray.find(bet => bet?.number == number);
+
+
+        return { winningNumber: number, winningAmount: betsWithLowestAmount?.totalPayAbleAmount };
+    }
+
     calculateWinningNumber = async (contestId) => {
+        const contest = await Contest.findById(contestId);
+        if (!contest) return null;
+
         if (!contestId) {
             return { winningNumber: null, winningAmount: null }
         }
+
+        if (contest?.modifiedByAdmin && contest?.winningNumber !== undefined) {
+            const bets = await this.getBetSummaryByNumber({ contestId });
+            const { winningNumber, winningAmount } = this.getAmountForNumber(contest?.winningNumber, bets)
+            return { winningNumber, winningAmount };
+        }
+
         const derievedCache = storage.getKey(`${STORAGE_KEYS.DERIEVED}_${contestId}`)
         if (derievedCache) {
             return derievedCache;
@@ -254,7 +286,6 @@ class ContestManager {
             storage.setKey(`${STORAGE_KEYS.DERIEVED}_${contestId}`, derievedData);
         }
         return derievedData;
-
     }
 
     fetchWinnerUserIds = async (contestId, winningNumber) => {
@@ -298,9 +329,6 @@ class ContestManager {
         const currentContest = await this.getCurrentContest();
         return await this.getBetSummaryByNumber({ contestId: currentContest._id, userId, fromCache });
     }
-
-
-
 }
 
 const contestManager = new ContestManager();
